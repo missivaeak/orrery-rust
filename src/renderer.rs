@@ -55,7 +55,7 @@ impl Renderer {
 
         let size = window.inner_size();
         let instance_description = InstanceDescriptor {
-            backends: Backends::GL,
+            backends: Backends::all(),
             ..Default::default()
         };
         let instance = Instance::new(&instance_description);

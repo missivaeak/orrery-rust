@@ -6,8 +6,13 @@ use wgpu::{
     Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},
 };
+use winit::{
+    event::KeyEvent,
+    keyboard::{Key, NamedKey},
+};
 
 use crate::{
+    controls::Controls,
     math::{self, create_model, it_mat4},
     primitives::{
         cube::{cube_normals, cube_positions, cube_uvs},
@@ -84,12 +89,123 @@ pub struct ObjectFragmentUniform {
     pub colour: [f32; 4],
 }
 
+pub enum InputEventResult {
+    Ok,
+    RequestClose,
+}
+
 pub struct State {
     initial_timestamp: Instant,
     last_timestamp: Instant,
+    controls: Controls,
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
     objects: Vec<Object>,
+}
+
+impl State {
+    pub fn new(device: &Device, aspect_ratio: f32) -> Self {
+        let timestamp = Instant::now();
+
+        let controls = Controls::new();
+        let view_mat = controls.get_view_mat();
+        let projection_mat = math::create_projection(aspect_ratio, true);
+        let mut objects = Vec::new();
+        let global_vertex_uniform = GlobalVertexUniform {
+            projection_mat: projection_mat.into(),
+            view_mat: view_mat.into(),
+        };
+        let global_fragment_uniform = GlobalFragmentUniform {
+            camera_position: (
+                controls.position.x,
+                controls.position.y,
+                controls.position.z,
+                1.0,
+            )
+                .into(),
+            light_position: (3.0, 0.0, 5.0, 1.0).into(),
+            light_colour: (1.0, 1.0, 1.0, 1.0).into(),
+            specular_colour: (1.0, 1.0, 1.0, 1.0).into(),
+            ambient_intensity: 0.1,
+            diffuse_intensity: 0.8,
+            specular_intensity: 0.4,
+            specular_gloss: 30.0,
+        };
+
+        objects.push(get_cube_object(device));
+        objects.push(get_sphere_object(device));
+
+        Self {
+            global_vertex_uniform,
+            global_fragment_uniform,
+            controls,
+            objects,
+            last_timestamp: timestamp,
+            initial_timestamp: timestamp,
+        }
+    }
+
+    pub fn update(&mut self, device: &Device) {
+        self.global_vertex_uniform.view_mat = self.controls.get_view_mat().into();
+        // let now = Instant::now();
+        self.last_timestamp = Instant::now();
+        // let delta_time = now.duration_since(self.initial_timestamp).as_secs_f32();
+        let total_time = self.initial_timestamp.elapsed().as_secs_f32();
+
+        let model_mat = create_model(
+            (-0.8, -6.0, 2.4).into(),
+            // (2.4, -0.5, 0.0).into(),
+            (total_time.sin(), total_time.cos(), total_time.cos()).into(),
+            (1.0, 1.0, 1.0).into(),
+        );
+
+        // let sphere_mat = create_model(
+        //     (0.0, 0.0, 0.0).into(),
+        //     // (2.4, -0.5, 0.0).into(),
+        //     (total_time.sin(), total_time.cos(), total_time.cos()).into(),
+        //     (1.0, 1.0, 1.0).into(),
+        // );
+        self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Object Vertex Uniform Buffer"),
+            contents: bytemuck::bytes_of(&ObjectVertexUniform {
+                model_mat: model_mat.into(),
+                normal_mat: it_mat4(model_mat).into(),
+            }),
+            usage: BufferUsages::UNIFORM,
+        });
+        // self.objects[1].renderable.vertex_uniform.model_mat = sphere_mat.into();
+        // self.objects[1].renderable.vertex_uniform.normal_mat = it_mat4(sphere_mat).into();
+
+        // for object in self.objects.iter_mut() {
+        //     object.renderable.vertex_uniform.model_mat = model_mat.into();
+        //     object.renderable.vertex_uniform.normal_mat = it_mat4(model_mat).into();
+        // }
+    }
+
+    pub fn get_objects(&self) -> &Vec<Object> {
+        &self.objects
+    }
+
+    pub fn get_global_uniforms(&self) -> (&GlobalVertexUniform, &GlobalFragmentUniform) {
+        (&self.global_vertex_uniform, &self.global_fragment_uniform)
+    }
+
+    pub fn handle_key_input(&mut self, key_event: KeyEvent) -> InputEventResult {
+        println!(
+            "Handling key input {:?} {:?}",
+            key_event.state, key_event.text
+        );
+        match key_event {
+            KeyEvent {
+                logical_key: Key::Named(NamedKey::Escape),
+                ..
+            } => InputEventResult::RequestClose,
+            _ => {
+                self.controls.handle_key_input(key_event);
+                InputEventResult::Ok
+            }
+        }
+    }
 }
 
 fn get_cube_object(device: &Device) -> Object {
@@ -178,86 +294,5 @@ fn get_sphere_object(device: &Device) -> Object {
         buffer,
         vertex_uniform_buffer,
         fragment_uniform_buffer,
-    }
-}
-
-impl State {
-    pub fn new(device: &Device, aspect_ratio: f32) -> Self {
-        let timestamp = Instant::now();
-
-        let camera_position = (3.0, 3.0, 1.5).into();
-        let look_direction = (0.0, 0.0, 0.0).into();
-        let view_mat = math::create_view(camera_position, look_direction);
-        let projection_mat = math::create_projection(aspect_ratio, true);
-        let mut objects = Vec::new();
-        let global_vertex_uniform = GlobalVertexUniform {
-            projection_mat: projection_mat.into(),
-            view_mat: view_mat.into(),
-        };
-        let global_fragment_uniform = GlobalFragmentUniform {
-            camera_position: (camera_position.x, camera_position.y, camera_position.z, 1.0).into(),
-            light_position: (3.0, 0.0, 5.0, 1.0).into(),
-            light_colour: (1.0, 1.0, 1.0, 1.0).into(),
-            specular_colour: (1.0, 1.0, 1.0, 1.0).into(),
-            ambient_intensity: 0.1,
-            diffuse_intensity: 0.8,
-            specular_intensity: 0.4,
-            specular_gloss: 30.0,
-        };
-
-        objects.push(get_cube_object(device));
-        objects.push(get_sphere_object(device));
-
-        Self {
-            global_vertex_uniform,
-            global_fragment_uniform,
-            objects,
-            last_timestamp: timestamp,
-            initial_timestamp: timestamp,
-        }
-    }
-
-    pub fn update(&mut self, device: &Device) {
-        // let now = Instant::now();
-        self.last_timestamp = Instant::now();
-        // let delta_time = now.duration_since(self.initial_timestamp).as_secs_f32();
-        let total_time = self.initial_timestamp.elapsed().as_secs_f32();
-
-        let model_mat = create_model(
-            (-0.8, -6.0, 2.4).into(),
-            // (2.4, -0.5, 0.0).into(),
-            (total_time.sin(), total_time.cos(), total_time.cos()).into(),
-            (1.0, 1.0, 1.0).into(),
-        );
-
-        // let sphere_mat = create_model(
-        //     (0.0, 0.0, 0.0).into(),
-        //     // (2.4, -0.5, 0.0).into(),
-        //     (total_time.sin(), total_time.cos(), total_time.cos()).into(),
-        //     (1.0, 1.0, 1.0).into(),
-        // );
-        self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Object Vertex Uniform Buffer"),
-            contents: bytemuck::bytes_of(&ObjectVertexUniform {
-                model_mat: model_mat.into(),
-                normal_mat: it_mat4(model_mat).into(),
-            }),
-            usage: BufferUsages::UNIFORM,
-        });
-        // self.objects[1].renderable.vertex_uniform.model_mat = sphere_mat.into();
-        // self.objects[1].renderable.vertex_uniform.normal_mat = it_mat4(sphere_mat).into();
-
-        // for object in self.objects.iter_mut() {
-        //     object.renderable.vertex_uniform.model_mat = model_mat.into();
-        //     object.renderable.vertex_uniform.normal_mat = it_mat4(model_mat).into();
-        // }
-    }
-
-    pub fn get_objects(&self) -> &Vec<Object> {
-        &self.objects
-    }
-
-    pub fn get_global_uniforms(&self) -> (&GlobalVertexUniform, &GlobalFragmentUniform) {
-        (&self.global_vertex_uniform, &self.global_fragment_uniform)
     }
 }

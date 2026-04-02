@@ -1,4 +1,5 @@
 mod constants;
+mod controls;
 mod math;
 mod primitives;
 mod renderer;
@@ -9,13 +10,15 @@ use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{KeyEvent, WindowEvent},
+    event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::{Key, NamedKey},
     window::{Window, WindowId},
 };
 
-use crate::{renderer::Renderer, state::State};
+use crate::{
+    renderer::Renderer,
+    state::{InputEventResult, State},
+};
 
 fn main() {
     // let args: Vec<String> = std::env::args().collect();
@@ -97,15 +100,16 @@ impl ApplicationHandler for App {
                     window.request_redraw();
                 }
             }
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        logical_key: Key::Named(NamedKey::Escape),
-                        ..
-                    },
-                ..
-            } => {
-                event_loop.exit();
+            WindowEvent::KeyboardInput { event, .. } => {
+                if let Some(state) = &mut self.state {
+                    match state.handle_key_input(event) {
+                        InputEventResult::RequestClose => {
+                            println!("Close requested by key input");
+                            event_loop.exit()
+                        }
+                        InputEventResult::Ok => (),
+                    }
+                }
             }
             WindowEvent::Resized(new_size) => {
                 if let Some(renderer) = &mut self.renderer {
