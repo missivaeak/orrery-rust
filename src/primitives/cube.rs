@@ -1,4 +1,4 @@
-use cgmath::{Vector2, Vector3, Vector4};
+use cgmath::{Vector2, Vector3};
 
 pub fn cube_positions() -> Vec<Vector3<f32>> {
     [

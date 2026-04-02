@@ -1,8 +1,5 @@
 use crate::constants::BACKGROUND_COLOUR;
-use crate::state::{
-    GlobalFragmentUniform, GlobalVertexUniform, Object, ObjectFragmentUniform, ObjectVertexUniform,
-    Vertex,
-};
+use crate::state::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
 use std::{borrow::Cow, sync::Arc};
 
 use std::collections::HashMap;
@@ -16,7 +13,7 @@ use wgpu::{
     wgt::{CommandEncoderDescriptor, TextureViewDescriptor},
 };
 use wgpu::{
-    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
+    BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
     BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
     CompareFunction, DepthBiasState, DepthStencilState, Device, Extent3d,
     RenderPassDepthStencilAttachment, ShaderStages, StencilState, StoreOp, TextureDescriptor,
@@ -58,7 +55,7 @@ impl Renderer {
 
         let size = window.inner_size();
         let instance_description = InstanceDescriptor {
-            backends: Backends::VULKAN,
+            backends: Backends::GL,
             ..Default::default()
         };
         let instance = Instance::new(&instance_description);

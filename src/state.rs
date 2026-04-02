@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Matrix, Matrix3, Matrix4, SquareMatrix, Vector2, Vector3, Vector4};
+use cgmath::{Vector2, Vector3};
 use wgpu::{
     Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},

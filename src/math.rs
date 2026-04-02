@@ -1,8 +1,6 @@
 use std::f32::consts::TAU;
 
-use cgmath::{
-    Angle, Deg, Matrix, Matrix3, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective,
-};
+use cgmath::{Angle, Deg, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective};
 
 // I want to use blender coordinates, right handed, Z up, Y forward, X right
 
@@ -14,18 +12,6 @@ pub const NORMALISATION_MATRIX: Matrix4<f32> = Matrix4::new(
   0.0, 0.0, 0.5, 0.0,
   0.0, 0.0, 0.5, 1.0
 );
-
-pub fn create_view_projection(
-    camera_position: Point3<f32>,
-    look_direction: Point3<f32>,
-    aspect: f32,
-    is_perspective: bool,
-) -> Matrix4<f32> {
-    let view_mat = create_view(camera_position, look_direction);
-    let project_mat = create_projection(aspect, is_perspective);
-
-    project_mat * view_mat
-}
 
 pub fn create_view(camera_position: Point3<f32>, look_direction: Point3<f32>) -> Matrix4<f32> {
     Matrix4::look_at_rh(camera_position, look_direction, Vector3::unit_z())
@@ -50,14 +36,6 @@ pub fn create_model(
     let scale_mat = Matrix4::from_nonuniform_scale(scaling.x, scaling.y, scaling.z);
 
     trans_mat * rotate_mat_z * rotate_mat_y * rotate_mat_x * scale_mat
-}
-
-pub fn truncate_mat4(mat4: Matrix4<f32>) -> Matrix3<f32> {
-    Matrix3::new(
-        mat4.x.x, mat4.x.y, mat4.x.z, // Column 0
-        mat4.y.x, mat4.y.y, mat4.y.z, // Column 1
-        mat4.z.x, mat4.z.y, mat4.z.z, // Column 2
-    )
 }
 
 pub fn it_mat4(mat4: Matrix4<f32>) -> Matrix4<f32> {
