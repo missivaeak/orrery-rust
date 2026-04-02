@@ -1,0 +1,22 @@
+[package]
+name = "rust-renderer"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "rust-renderer"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.102"
+bytemuck = { version = "1.25.0", features = ["derive"] }
+cgmath = "0.18.0"
+env_logger = "0.11.9"
+futures = "0.3.32"
+gfx-hal = "0.9.0"
+image = "0.25.9"
+log = "0.4.29"
+pollster = "0.4.0"
+rand = "0.10.0"
+wgpu = "28.0.0"
+winit = "0.30.13"
