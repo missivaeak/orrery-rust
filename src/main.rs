@@ -5,7 +5,7 @@ mod primitives;
 mod renderer;
 mod state;
 
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 
 use winit::{
     application::ApplicationHandler,
@@ -15,10 +15,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{
-    renderer::Renderer,
-    state::{InputEventResult, State},
-};
+use crate::{controls::InputEventResult, renderer::Renderer, state::State};
 
 fn main() {
     // let args: Vec<String> = std::env::args().collect();
@@ -102,9 +99,10 @@ impl ApplicationHandler for App {
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 if let Some(state) = &mut self.state {
-                    match state.handle_key_input(event) {
+                    match state.controls.handle_key_input(event) {
                         InputEventResult::RequestClose => {
                             println!("Close requested by key input");
+                            let _ = fs::write(".restart-trigger", "restart");
                             event_loop.exit()
                         }
                         InputEventResult::Ok => (),

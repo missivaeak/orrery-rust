@@ -13,8 +13,12 @@ pub const NORMALISATION_MATRIX: Matrix4<f32> = Matrix4::new(
   0.0, 0.0, 0.5, 1.0
 );
 
-pub fn create_view(camera_position: Point3<f32>, look_direction: Point3<f32>) -> Matrix4<f32> {
-    Matrix4::look_at_rh(camera_position, look_direction, Vector3::unit_z())
+pub fn create_view(camera_position: Point3<f32>, camera_direction: Vector3<f32>) -> Matrix4<f32> {
+    Matrix4::look_at_rh(
+        camera_position,
+        camera_position + camera_direction,
+        Vector3::unit_z(),
+    )
 }
 
 pub fn create_projection(aspect: f32, is_perspective: bool) -> Matrix4<f32> {

@@ -6,10 +6,6 @@ use wgpu::{
     Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},
 };
-use winit::{
-    event::KeyEvent,
-    keyboard::{Key, NamedKey},
-};
 
 use crate::{
     controls::Controls,
@@ -89,15 +85,10 @@ pub struct ObjectFragmentUniform {
     pub colour: [f32; 4],
 }
 
-pub enum InputEventResult {
-    Ok,
-    RequestClose,
-}
-
 pub struct State {
     initial_timestamp: Instant,
     last_timestamp: Instant,
-    controls: Controls,
+    pub controls: Controls,
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
     objects: Vec<Object>,
@@ -117,9 +108,9 @@ impl State {
         };
         let global_fragment_uniform = GlobalFragmentUniform {
             camera_position: (
-                controls.position.x,
-                controls.position.y,
-                controls.position.z,
+                controls.camera_position.x,
+                controls.camera_position.y,
+                controls.camera_position.z,
                 1.0,
             )
                 .into(),
@@ -146,6 +137,7 @@ impl State {
     }
 
     pub fn update(&mut self, device: &Device) {
+        self.controls.update();
         self.global_vertex_uniform.view_mat = self.controls.get_view_mat().into();
         // let now = Instant::now();
         self.last_timestamp = Instant::now();
@@ -188,23 +180,6 @@ impl State {
 
     pub fn get_global_uniforms(&self) -> (&GlobalVertexUniform, &GlobalFragmentUniform) {
         (&self.global_vertex_uniform, &self.global_fragment_uniform)
-    }
-
-    pub fn handle_key_input(&mut self, key_event: KeyEvent) -> InputEventResult {
-        println!(
-            "Handling key input {:?} {:?}",
-            key_event.state, key_event.text
-        );
-        match key_event {
-            KeyEvent {
-                logical_key: Key::Named(NamedKey::Escape),
-                ..
-            } => InputEventResult::RequestClose,
-            _ => {
-                self.controls.handle_key_input(key_event);
-                InputEventResult::Ok
-            }
-        }
     }
 }
 
