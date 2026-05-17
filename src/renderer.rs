@@ -1,8 +1,7 @@
-use crate::constants::BACKGROUND_COLOUR;
+use crate::helpers::constants::BACKGROUND_COLOUR;
 use crate::state::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
 use std::{borrow::Cow, sync::Arc};
 
-use egui_wgpu::ScreenDescriptor;
 use egui_wgpu::wgpu::Instance;
 use std::collections::HashMap;
 use wgpu::{

@@ -4,38 +4,18 @@ use egui_winit::State;
 use wgpu::{CommandEncoder, Device, Queue, StoreOp, TextureFormat, TextureView};
 use winit::{
     dpi::LogicalSize,
-    event::WindowEvent,
     window::{Theme, Window},
 };
 
 pub struct Gui {
-    state: Option<State>,
-    renderer: Option<Renderer>,
+    state: State,
+    renderer: Renderer,
     frame_started: bool,
     pub screen_descriptor: ScreenDescriptor,
 }
 
-impl Default for Gui {
-    fn default() -> Self {
-        Self {
-            state: None,
-            renderer: None,
-            frame_started: false,
-            screen_descriptor: ScreenDescriptor {
-                size_in_pixels: [512, 512],
-                pixels_per_point: 1.0,
-            },
-        }
-    }
-}
-
 impl Gui {
-    pub fn new(
-        device: &Device,
-        window: &Window,
-        output_colour_format: TextureFormat,
-        size: LogicalSize<f32>,
-    ) -> Self {
+    pub fn new(device: &Device, window: &Window, size: LogicalSize<f32>) -> Self {
         let context = Context::default();
         let state = State::new(
             context,
@@ -45,7 +25,11 @@ impl Gui {
             Some(Theme::Light),
             Some(2 * 1024),
         );
-        let renderer = Renderer::new(device, output_colour_format, RendererOptions::default());
+        let renderer = Renderer::new(
+            device,
+            TextureFormat::Rgba8Unorm,
+            RendererOptions::default(),
+        );
         Self {
             renderer,
             state,
@@ -55,10 +39,6 @@ impl Gui {
             },
             frame_started: false,
         }
-    }
-
-    pub fn handle_input(&mut self, window: &Window, event: &WindowEvent) {
-        let _ = self.state.on_window_event(window, event);
     }
 
     pub fn ppp(&mut self, v: f32) {
@@ -78,13 +58,12 @@ impl Gui {
         encoder: &mut CommandEncoder,
         window: &Window,
         window_surface_view: &TextureView,
-        screen_descriptor: ScreenDescriptor,
     ) {
         if !self.frame_started {
             panic!("begin_frame must be called before end_frame_and_draw can be called!");
         }
 
-        self.ppp(screen_descriptor.pixels_per_point);
+        self.ppp(self.screen_descriptor.pixels_per_point);
 
         let full_output = self.state.egui_ctx().end_pass();
 
@@ -100,7 +79,7 @@ impl Gui {
                 .update_texture(device, queue, *id, image_delta);
         }
         self.renderer
-            .update_buffers(device, queue, encoder, &tris, &screen_descriptor);
+            .update_buffers(device, queue, encoder, &tris, &self.screen_descriptor);
         let rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: window_surface_view,
@@ -119,7 +98,7 @@ impl Gui {
         });
 
         self.renderer
-            .render(&mut rpass.forget_lifetime(), &tris, &screen_descriptor);
+            .render(&mut rpass.forget_lifetime(), &tris, &self.screen_descriptor);
         for x in &full_output.textures_delta.free {
             self.renderer.free_texture(x)
         }

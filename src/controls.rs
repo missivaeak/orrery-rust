@@ -1,10 +1,10 @@
-use cgmath::{ElementWise, InnerSpace, Matrix4, Point3, Vector3, Zero, num_traits::Pow};
+use cgmath::{InnerSpace, Matrix4, Point3, Vector3, Zero};
 use winit::{
     event::{ElementState, KeyEvent},
     keyboard::{Key, NamedKey},
 };
 
-use crate::math::create_view;
+use crate::helpers::math::create_view;
 pub enum InputEventResult {
     Ok,
     RequestClose,

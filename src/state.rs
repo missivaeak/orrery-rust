@@ -3,15 +3,14 @@ use std::time::Instant;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Vector2, Vector3};
 use wgpu::{
-    Buffer, BufferAddress, BufferUsages, Device, TextureFormat, VertexBufferLayout,
+    Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},
 };
-use winit::{dpi::LogicalSize, window::Window};
+use winit::dpi::LogicalSize;
 
 use crate::{
     controls::Controls,
-    gui::Gui,
-    math::{self, create_model, it_mat4},
+    helpers::math::{self, create_model, it_mat4},
     primitives::{
         cube::{cube_normals, cube_positions, cube_uvs},
         sphere::sphere_data,
@@ -88,8 +87,6 @@ pub struct ObjectFragmentUniform {
 }
 
 pub struct State {
-    pub controls: Controls,
-    pub gui: Gui,
     initial_timestamp: Instant,
     last_timestamp: Instant,
     global_vertex_uniform: GlobalVertexUniform,
@@ -98,12 +95,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(
-        device: &Device,
-        window: &Window,
-        output_colour_format: TextureFormat,
-        size: LogicalSize<f32>,
-    ) -> Self {
+    pub fn new(device: &Device, size: LogicalSize<f32>) -> Self {
         let timestamp = Instant::now();
 
         let controls = Controls::new();
@@ -137,17 +129,14 @@ impl State {
         Self {
             global_vertex_uniform,
             global_fragment_uniform,
-            controls,
             objects,
             last_timestamp: timestamp,
             initial_timestamp: timestamp,
-            gui: Gui::new(device, window, output_colour_format, size),
         }
     }
 
-    pub fn update(&mut self, device: &Device) {
-        self.controls.update();
-        self.global_vertex_uniform.view_mat = self.controls.get_view_mat().into();
+    pub fn update(&mut self, device: &Device, view_mat: [[f32; 4]; 4]) {
+        self.global_vertex_uniform.view_mat = view_mat;
         // let now = Instant::now();
         self.last_timestamp = Instant::now();
         // let delta_time = now.duration_since(self.initial_timestamp).as_secs_f32();

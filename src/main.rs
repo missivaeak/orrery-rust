@@ -1,7 +1,6 @@
-mod constants;
 mod controls;
 mod gui;
-mod math;
+mod helpers;
 mod primitives;
 mod renderer;
 mod state;
@@ -16,7 +15,12 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{controls::InputEventResult, renderer::Renderer, state::State};
+use crate::{
+    controls::{Controls, InputEventResult},
+    gui::Gui,
+    renderer::Renderer,
+    state::State,
+};
 
 fn main() {
     // let args: Vec<String> = std::env::args().collect();
@@ -42,6 +46,8 @@ struct App {
     window: Option<Arc<Window>>,
     renderer: Option<Renderer>,
     state: Option<State>,
+    controls: Option<Controls>,
+    gui: Option<Gui>,
 }
 
 impl ApplicationHandler for App {
@@ -66,12 +72,20 @@ impl ApplicationHandler for App {
         ));
         println!("WGPU initialised");
 
-        let state = State::new(&renderer.device, &window, renderer.config.format, size);
+        let state = State::new(&renderer.device, size);
         println!("State initialised");
+
+        let controls = Controls::new();
+        println!("Controls initialised");
+
+        let gui = Gui::new(&renderer.device, &window, size);
+        println!("GUI initialised");
 
         self.window = Some(window);
         self.renderer = Some(renderer);
         self.state = Some(state);
+        self.controls = Some(controls);
+        self.gui = Some(gui);
 
         println!("Initialisation completed")
     }
@@ -85,34 +99,24 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 if let Some(renderer) = &mut self.renderer
                     && let Some(state) = &mut self.state
+                    && let Some(controls) = &mut self.controls
                 {
-                    state.update(&renderer.device);
+                    controls.update();
+                    state.update(&renderer.device, controls.get_view_mat().into());
                     let (vertex_uniform, fragment_uniform) = state.get_global_uniforms();
                     let objects = state.get_objects();
                     let window = self.window.as_ref().expect("Failed to get window");
-
-                    let screen_descriptor = state.gui.screen_descriptor;
-                    // ⚠️ temporarily take gui out
-                    let mut gui = std::mem::take(&mut state.gui);
+                    let gui = &mut self.gui.as_mut().expect("Failed to get GUI");
+                    gui.begin_frame(window);
 
                     renderer.render(
                         objects,
                         vertex_uniform,
                         fragment_uniform,
                         |device, queue, encoder, view| {
-                            gui.end_frame_and_draw(
-                                device,
-                                queue,
-                                encoder,
-                                window,
-                                view,
-                                screen_descriptor,
-                            )
+                            gui.end_frame_and_draw(device, queue, encoder, window, view)
                         },
                     );
-
-                    // put it back
-                    state.gui = gui;
                 }
 
                 if let Some(window) = &self.window {
@@ -120,8 +124,8 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
-                if let Some(state) = &mut self.state {
-                    match state.controls.handle_key_input(event) {
+                if let Some(controls) = &mut self.controls {
+                    match controls.handle_key_input(event) {
                         InputEventResult::RequestClose => {
                             println!("Close requested by key input");
                             let _ = fs::write(".restart-trigger", "restart");

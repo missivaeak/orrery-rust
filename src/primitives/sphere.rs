@@ -1,6 +1,6 @@
 use cgmath::{Deg, Vector2, Vector3};
 
-use crate::math::spherical_to_cartesian;
+use crate::helpers::math::spherical_to_cartesian;
 
 type SphereData = (Vec<Vector3<f32>>, Vec<Vector3<f32>>, Vec<Vector2<f32>>);
 
