@@ -3,12 +3,14 @@ use std::time::Instant;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Vector2, Vector3};
 use wgpu::{
-    Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
+    Buffer, BufferAddress, BufferUsages, Device, TextureFormat, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},
 };
+use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
     controls::Controls,
+    gui::Gui,
     math::{self, create_model, it_mat4},
     primitives::{
         cube::{cube_normals, cube_positions, cube_uvs},
@@ -86,21 +88,27 @@ pub struct ObjectFragmentUniform {
 }
 
 pub struct State {
+    pub controls: Controls,
+    pub gui: Gui,
     initial_timestamp: Instant,
     last_timestamp: Instant,
-    pub controls: Controls,
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
     objects: Vec<Object>,
 }
 
 impl State {
-    pub fn new(device: &Device, aspect_ratio: f32) -> Self {
+    pub fn new(
+        device: &Device,
+        window: &Window,
+        output_colour_format: TextureFormat,
+        size: LogicalSize<f32>,
+    ) -> Self {
         let timestamp = Instant::now();
 
         let controls = Controls::new();
         let view_mat = controls.get_view_mat();
-        let projection_mat = math::create_projection(aspect_ratio, true);
+        let projection_mat = math::create_projection(size.width / size.height, true);
         let mut objects = Vec::new();
         let global_vertex_uniform = GlobalVertexUniform {
             projection_mat: projection_mat.into(),
@@ -133,6 +141,7 @@ impl State {
             objects,
             last_timestamp: timestamp,
             initial_timestamp: timestamp,
+            gui: Gui::new(device, window, output_colour_format, size),
         }
     }
 

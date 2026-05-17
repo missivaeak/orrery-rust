@@ -2,24 +2,26 @@ use crate::constants::BACKGROUND_COLOUR;
 use crate::state::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
 use std::{borrow::Cow, sync::Arc};
 
+use egui_wgpu::ScreenDescriptor;
+use egui_wgpu::wgpu::Instance;
 use std::collections::HashMap;
 use wgpu::{
-    Backends, BlendComponent, BlendState, Color, ColorTargetState, ColorWrites, DeviceDescriptor,
-    Features, FragmentState, Instance, InstanceDescriptor, Limits, LoadOp, MultisampleState,
-    Operations, PipelineCompilationOptions, PipelineLayoutDescriptor, PowerPreference, PresentMode,
-    PrimitiveState, PrimitiveTopology, RenderPassColorAttachment, RenderPassDescriptor,
-    RenderPipeline, RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor,
-    ShaderSource, SurfaceConfiguration, TextureUsages, VertexState,
+    Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
+    BindGroupLayoutEntry, BindingType, BlendComponent, BlendState, Buffer, BufferBindingType,
+    BufferDescriptor, BufferUsages, Color, ColorTargetState, ColorWrites, CompareFunction,
+    CurrentSurfaceTexture, DepthBiasState, DepthStencilState, Device, DeviceDescriptor, Extent3d,
+    Features, FragmentState, InstanceDescriptor, Limits, LoadOp, MultisampleState, Operations,
+    PipelineCompilationOptions, PipelineLayoutDescriptor, PowerPreference, PresentMode,
+    PrimitiveState, PrimitiveTopology, RenderPassColorAttachment, RenderPassDepthStencilAttachment,
+    RenderPassDescriptor, RenderPipeline, RenderPipelineDescriptor, RequestAdapterOptions,
+    ShaderModuleDescriptor, ShaderSource, ShaderStages, StencilState, StoreOp,
+    SurfaceConfiguration, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+    VertexState,
     wgt::{CommandEncoderDescriptor, TextureViewDescriptor},
 };
-use wgpu::{
-    BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-    BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor, BufferUsages,
-    CompareFunction, DepthBiasState, DepthStencilState, Device, Extent3d,
-    RenderPassDepthStencilAttachment, ShaderStages, StencilState, StoreOp, TextureDescriptor,
-    TextureDimension, TextureFormat,
-};
+use wgpu::{CommandEncoder, Queue, TextureView};
 use winit::dpi::PhysicalSize;
+use winit::event_loop::OwnedDisplayHandle;
 use winit::window::Window;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
@@ -44,21 +46,22 @@ pub struct Renderer {
     surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
     queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
+    pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     render_group_map: HashMap<RenderGroupType, RenderGroup>,
 }
 
 impl Renderer {
-    pub async fn new(window: Arc<Window>) -> Self {
-        print_adapter_info().await;
+    pub async fn new(window: Arc<Window>, display_handle: Box<OwnedDisplayHandle>) -> Self {
+        print_adapter_info(display_handle.clone()).await;
 
         let size = window.inner_size();
-        let instance_description = InstanceDescriptor {
-            backends: Backends::all(),
-            ..Default::default()
-        };
-        let instance = Instance::new(&instance_description);
+        // let instance_description = InstanceDescriptor {
+        //     backends: Backends::all(),
+        //     ..Default::default()
+        // };
+        let instance_descriptor = InstanceDescriptor::new_with_display_handle(display_handle);
+        let instance = Instance::new(instance_descriptor);
         let surface = instance
             .create_surface(window)
             .expect("Failed to create surface");
@@ -119,12 +122,15 @@ impl Renderer {
         }
     }
 
-    pub fn render(
+    pub fn render<F>(
         &mut self,
         objects: &Vec<Object>,
         global_vertex_uniform: &GlobalVertexUniform,
         global_fragment_uniform: &GlobalFragmentUniform,
-    ) -> Result<(), wgpu::SurfaceError> {
+        mut egui_render: F,
+    ) where
+        F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView),
+    {
         let mut object_map: HashMap<RenderGroupType, Vec<&Object>> = HashMap::new();
 
         for object in objects {
@@ -134,135 +140,135 @@ impl Renderer {
                 .push(object);
         }
         // access
-        // use pipeline
-        let frame = self
-            .surface
-            .get_current_texture()
-            .expect("Failed to get texture");
 
-        let view = frame.texture.create_view(&TextureViewDescriptor::default());
+        if let CurrentSurfaceTexture::Success(frame) = self.surface.get_current_texture() {
+            let view = frame.texture.create_view(&TextureViewDescriptor::default());
 
-        let depth_texture = self.device.create_texture(&TextureDescriptor {
-            view_formats: &[],
-            size: Extent3d {
-                width: self.size.width,
-                height: self.size.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Depth24Plus,
-            usage: TextureUsages::RENDER_ATTACHMENT,
-            label: None,
-        });
-        let depth_view = depth_texture.create_view(&TextureViewDescriptor::default());
-        let mut first = true;
-        let mut encoder = self
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor { label: None });
-        for render_group_type in RenderGroupType::VALUES {
-            let render_group = self
-                .render_group_map
-                .get(&render_group_type)
-                .expect("Failed to get render group");
-
-            let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
+            let depth_texture = self.device.create_texture(&TextureDescriptor {
+                view_formats: &[],
+                size: Extent3d {
+                    width: self.size.width,
+                    height: self.size.height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D2,
+                format: TextureFormat::Depth24Plus,
+                usage: TextureUsages::RENDER_ATTACHMENT,
                 label: None,
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: if first {
-                            LoadOp::Clear(Color {
-                                r: BACKGROUND_COLOUR.x as f64,
-                                g: BACKGROUND_COLOUR.y as f64,
-                                b: BACKGROUND_COLOUR.z as f64,
-                                a: BACKGROUND_COLOUR.w as f64,
-                            })
-                        } else {
-                            LoadOp::Load
-                        },
-                        store: StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: &depth_view,
-                    depth_ops: Some(Operations {
-                        load: if first {
-                            LoadOp::Clear(1.0)
-                        } else {
-                            LoadOp::Load
-                        },
-                        store: StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
             });
+            let depth_view = depth_texture.create_view(&TextureViewDescriptor::default());
+            let mut first = true;
+            let mut encoder = self
+                .device
+                .create_command_encoder(&CommandEncoderDescriptor { label: None });
+            for render_group_type in RenderGroupType::VALUES {
+                let render_group = self
+                    .render_group_map
+                    .get(&render_group_type)
+                    .expect("Failed to get render group");
 
-            first = false;
+                let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: if first {
+                                LoadOp::Clear(Color {
+                                    r: BACKGROUND_COLOUR.x as f64,
+                                    g: BACKGROUND_COLOUR.y as f64,
+                                    b: BACKGROUND_COLOUR.z as f64,
+                                    a: BACKGROUND_COLOUR.w as f64,
+                                })
+                            } else {
+                                LoadOp::Load
+                            },
+                            store: StoreOp::Store,
+                        },
+                        depth_slice: None,
+                    })],
+                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                        view: &depth_view,
+                        depth_ops: Some(Operations {
+                            load: if first {
+                                LoadOp::Clear(1.0)
+                            } else {
+                                LoadOp::Load
+                            },
+                            store: StoreOp::Store,
+                        }),
+                        stencil_ops: None,
+                    }),
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                });
 
-            self.queue.write_buffer(
-                &render_group.global_vertex_uniform_buffer,
-                0,
-                bytemuck::bytes_of(global_vertex_uniform),
-            );
-            self.queue.write_buffer(
-                &render_group.global_fragment_uniform_buffer,
-                0,
-                bytemuck::bytes_of(global_fragment_uniform),
-            );
+                first = false;
 
-            if let Some(objects) = object_map.get(&render_group_type) {
-                for object in objects.iter() {
-                    {
-                        let uniform_bind_group =
-                            self.device.create_bind_group(&BindGroupDescriptor {
-                                layout: &render_group.uniform_bind_group_layout,
-                                entries: &[
-                                    BindGroupEntry {
-                                        binding: 0,
-                                        resource: render_group
-                                            .global_vertex_uniform_buffer
-                                            .as_entire_binding(),
-                                    },
-                                    BindGroupEntry {
-                                        binding: 1,
-                                        resource: render_group
-                                            .global_fragment_uniform_buffer
-                                            .as_entire_binding(),
-                                    },
-                                    BindGroupEntry {
-                                        binding: 2,
-                                        resource: object.vertex_uniform_buffer.as_entire_binding(),
-                                    },
-                                    BindGroupEntry {
-                                        binding: 3,
-                                        resource: object
-                                            .fragment_uniform_buffer
-                                            .as_entire_binding(),
-                                    },
-                                ],
-                                label: Some("Uniform Bind Group"),
-                            });
+                self.queue.write_buffer(
+                    &render_group.global_vertex_uniform_buffer,
+                    0,
+                    bytemuck::bytes_of(global_vertex_uniform),
+                );
+                self.queue.write_buffer(
+                    &render_group.global_fragment_uniform_buffer,
+                    0,
+                    bytemuck::bytes_of(global_fragment_uniform),
+                );
 
-                        rpass.set_pipeline(&render_group.render_pipeline);
-                        rpass.set_vertex_buffer(0, object.buffer.slice(..));
-                        rpass.set_bind_group(0, &uniform_bind_group, &[]);
-                        rpass.draw(0..object.buffer_length, 0..1);
+                if let Some(objects) = object_map.get(&render_group_type) {
+                    for object in objects.iter() {
+                        {
+                            let uniform_bind_group =
+                                self.device.create_bind_group(&BindGroupDescriptor {
+                                    layout: &render_group.uniform_bind_group_layout,
+                                    entries: &[
+                                        BindGroupEntry {
+                                            binding: 0,
+                                            resource: render_group
+                                                .global_vertex_uniform_buffer
+                                                .as_entire_binding(),
+                                        },
+                                        BindGroupEntry {
+                                            binding: 1,
+                                            resource: render_group
+                                                .global_fragment_uniform_buffer
+                                                .as_entire_binding(),
+                                        },
+                                        BindGroupEntry {
+                                            binding: 2,
+                                            resource: object
+                                                .vertex_uniform_buffer
+                                                .as_entire_binding(),
+                                        },
+                                        BindGroupEntry {
+                                            binding: 3,
+                                            resource: object
+                                                .fragment_uniform_buffer
+                                                .as_entire_binding(),
+                                        },
+                                    ],
+                                    label: Some("Uniform Bind Group"),
+                                });
+
+                            rpass.set_pipeline(&render_group.render_pipeline);
+                            rpass.set_vertex_buffer(0, object.buffer.slice(..));
+                            rpass.set_bind_group(0, &uniform_bind_group, &[]);
+                            rpass.draw(0..object.buffer_length, 0..1);
+                        }
                     }
                 }
             }
+
+            egui_render(&self.device, &self.queue, &mut encoder, &view);
+
+            self.queue.submit(Some(encoder.finish()));
+
+            frame.present();
         }
-        self.queue.submit(Some(encoder.finish()));
-
-        frame.present();
-
-        Ok(())
     }
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
@@ -275,16 +281,10 @@ impl Renderer {
     }
 }
 
-async fn print_adapter_info() {
-    let instance_descriptor = InstanceDescriptor {
-        backends: Backends::all(),
-        ..Default::default()
-    };
-
-    let instance = Instance::new(&instance_descriptor);
-    let adapters = instance
-        .enumerate_adapters(instance_descriptor.backends)
-        .await;
+async fn print_adapter_info(display_handle: Box<OwnedDisplayHandle>) {
+    let instance_descriptor = InstanceDescriptor::new_with_display_handle(display_handle);
+    let instance = Instance::new(instance_descriptor);
+    let adapters = instance.enumerate_adapters(Backends::all()).await;
 
     for adapter in adapters {
         println!("{:?}", adapter.get_info());
@@ -360,7 +360,7 @@ fn get_unlit_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Unlit Pipeline Layout"),
-        bind_group_layouts: &[&uniform_bind_group_layout],
+        bind_group_layouts: &[Some(&uniform_bind_group_layout)],
         immediate_size: 0,
     });
 
@@ -394,8 +394,8 @@ fn get_unlit_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
         },
         depth_stencil: Some(DepthStencilState {
             format: TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::LessEqual,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(CompareFunction::LessEqual),
             stencil: StencilState::default(),
             bias: DepthBiasState::default(),
         }),
@@ -481,7 +481,7 @@ fn get_lit_render_group(device: &Device, config: &SurfaceConfiguration) -> Rende
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Unlit Pipeline Layout"),
-        bind_group_layouts: &[&uniform_bind_group_layout],
+        bind_group_layouts: &[Some(&uniform_bind_group_layout)],
         immediate_size: 0,
     });
 
@@ -515,8 +515,8 @@ fn get_lit_render_group(device: &Device, config: &SurfaceConfiguration) -> Rende
         },
         depth_stencil: Some(DepthStencilState {
             format: TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::LessEqual,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(CompareFunction::LessEqual),
             stencil: StencilState::default(),
             bias: DepthBiasState::default(),
         }),
@@ -602,7 +602,7 @@ fn get_clear_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Unlit Pipeline Layout"),
-        bind_group_layouts: &[&uniform_bind_group_layout],
+        bind_group_layouts: &[Some(&uniform_bind_group_layout)],
         immediate_size: 0,
     });
 
@@ -636,8 +636,8 @@ fn get_clear_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
         },
         depth_stencil: Some(DepthStencilState {
             format: TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::LessEqual,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(CompareFunction::LessEqual),
             stencil: StencilState::default(),
             bias: DepthBiasState::default(),
         }),

@@ -1,5 +1,6 @@
 mod constants;
 mod controls;
+mod gui;
 mod math;
 mod primitives;
 mod renderer;
@@ -59,10 +60,13 @@ impl ApplicationHandler for App {
         );
         println!("Window initialised");
 
-        let renderer = pollster::block_on(renderer::Renderer::new(window.clone()));
+        let renderer = pollster::block_on(renderer::Renderer::new(
+            window.clone(),
+            Box::new(event_loop.owned_display_handle()),
+        ));
         println!("WGPU initialised");
 
-        let state = State::new(&renderer.device, size.width / size.height);
+        let state = State::new(&renderer.device, &window, renderer.config.format, size);
         println!("State initialised");
 
         self.window = Some(window);
@@ -85,12 +89,30 @@ impl ApplicationHandler for App {
                     state.update(&renderer.device);
                     let (vertex_uniform, fragment_uniform) = state.get_global_uniforms();
                     let objects = state.get_objects();
-                    match renderer.render(objects, vertex_uniform, fragment_uniform) {
-                        Ok(_) => {}
-                        Err(wgpu::SurfaceError::Lost) => renderer.resize(renderer.size),
-                        Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
-                        Err(e) => eprintln!("{:?}", e),
-                    }
+                    let window = self.window.as_ref().expect("Failed to get window");
+
+                    let screen_descriptor = state.gui.screen_descriptor;
+                    // ⚠️ temporarily take gui out
+                    let mut gui = std::mem::take(&mut state.gui);
+
+                    renderer.render(
+                        objects,
+                        vertex_uniform,
+                        fragment_uniform,
+                        |device, queue, encoder, view| {
+                            gui.end_frame_and_draw(
+                                device,
+                                queue,
+                                encoder,
+                                window,
+                                view,
+                                screen_descriptor,
+                            )
+                        },
+                    );
+
+                    // put it back
+                    state.gui = gui;
                 }
 
                 if let Some(window) = &self.window {

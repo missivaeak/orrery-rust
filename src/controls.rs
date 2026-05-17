@@ -68,7 +68,12 @@ impl Controls {
             ((*forward_pressed as i32) - (*back_pressed as i32)) as f32,
             ((*up_pressed as i32) - (*down_pressed as i32)) as f32,
         );
-        let right_direction = camera_direction.cross(Vector3::unit_z()).normalize();
+        let right_direction = camera_direction.cross(Vector3::unit_z());
+        let right_direction = if right_direction.magnitude2() > 0.0 {
+            right_direction.normalize()
+        } else {
+            Vector3::unit_x() // fallback
+        };
 
         let movement_acceleration = (right_direction * local_acceleration.x)
             + (camera_direction * local_acceleration.y)
@@ -82,13 +87,15 @@ impl Controls {
     }
 
     pub fn update(&mut self) {
-        let speed = self.velocity.magnitude();
+        let mut speed = self.velocity.magnitude();
         let breaking = self.breaking_fixed + (speed * self.breaking_factor);
 
         if speed < breaking {
             self.velocity = Vector3::zero();
+            speed = 0.0;
         } else {
             self.velocity = self.velocity.normalize_to(speed - breaking);
+            speed -= breaking;
         }
 
         self.velocity += self.acceleration;
@@ -138,7 +145,7 @@ impl Controls {
                 ..
             } => {
                 if let Some(key_name) = named_key.to_text()
-                    && matches!(key_name, " ")
+                    && matches!(key_name, " " | "F1")
                 {
                     self.update_key_state(key_name, state);
                 }
