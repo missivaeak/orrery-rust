@@ -1,9 +1,11 @@
-use egui::{Context, ViewportId};
+use egui::{
+    Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Shadow, ViewportId,
+};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use egui_winit::State;
 use wgpu::{CommandEncoder, Device, Queue, StoreOp, TextureFormat, TextureView};
 use winit::{
-    dpi::LogicalSize,
+    dpi::{LogicalSize, PhysicalSize},
     window::{Theme, Window},
 };
 
@@ -27,7 +29,7 @@ impl Gui {
         );
         let renderer = Renderer::new(
             device,
-            TextureFormat::Rgba8Unorm,
+            TextureFormat::Rgba8UnormSrgb,
             RendererOptions::default(),
         );
         Self {
@@ -45,9 +47,65 @@ impl Gui {
         self.state.egui_ctx().set_pixels_per_point(v);
     }
 
-    pub fn begin_frame(&mut self, window: &Window) {
+    pub fn begin_frame(&mut self, window: &Window, average_frame_time: f32) {
         let raw_input = self.state.take_egui_input(window);
-        self.state.egui_ctx().begin_pass(raw_input);
+        let context = self.state.egui_ctx();
+        context.begin_pass(raw_input);
+
+        Area::new("debug_widget".into())
+            .anchor(Align2::RIGHT_BOTTOM, [0.0, 0.0])
+            .show(context, |ui| {
+                Frame::new()
+                    .fill(Color32::LIGHT_GRAY)
+                    .inner_margin(Margin::same(10))
+                    .corner_radius(CornerRadius {
+                        nw: 10,
+                        ..Default::default()
+                    })
+                    .shadow(Shadow {
+                        color: Color32::ORANGE,
+                        spread: 2,
+                        ..Default::default()
+                    })
+                    .show(ui, |ui| {
+                        let style = ui.style_mut();
+                        style.text_styles.insert(
+                            egui::TextStyle::Body,
+                            egui::FontId::new(16.0, egui::FontFamily::Monospace),
+                        );
+
+                        // ui.set_min_size([120.0, 0.0].into());
+                        // ui.set_min_width(120.0);
+
+                        egui::Grid::new("stats_grid").num_columns(2).show(ui, |ui| {
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("FPS:");
+                            });
+                            let fps = (60.0 / (average_frame_time * 1000.0)).to_string();
+                            ui.label(fps);
+                            ui.end_row();
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("X:");
+                            });
+                            ui.label("2");
+                            ui.end_row();
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("Y:");
+                            });
+                            ui.label("3");
+                            ui.end_row();
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("Z:");
+                            });
+                            ui.label("4");
+                            ui.end_row();
+                        });
+                    });
+            });
+
         self.frame_started = true;
     }
 
@@ -60,7 +118,7 @@ impl Gui {
         window_surface_view: &TextureView,
     ) {
         if !self.frame_started {
-            panic!("begin_frame must be called before end_frame_and_draw can be called!");
+            panic!("Begin_frame must be called before end_frame_and_draw can be called!");
         }
 
         self.ppp(self.screen_descriptor.pixels_per_point);
@@ -104,5 +162,12 @@ impl Gui {
         }
 
         self.frame_started = false;
+    }
+
+    pub fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.screen_descriptor = ScreenDescriptor {
+            size_in_pixels: [size.width, size.height],
+            pixels_per_point: 1.0,
+        }
     }
 }

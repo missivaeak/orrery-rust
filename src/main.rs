@@ -1,26 +1,14 @@
+mod app;
 mod controls;
 mod gui;
 mod helpers;
 mod primitives;
 mod renderer;
-mod state;
+mod scene;
 
-use std::{fs, sync::Arc};
+use winit::event_loop::{ControlFlow, EventLoop};
 
-use winit::{
-    application::ApplicationHandler,
-    dpi::LogicalSize,
-    event::WindowEvent,
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    window::{Window, WindowId},
-};
-
-use crate::{
-    controls::{Controls, InputEventResult},
-    gui::Gui,
-    renderer::Renderer,
-    state::State,
-};
+use crate::app::App;
 
 fn main() {
     // let args: Vec<String> = std::env::args().collect();
@@ -39,108 +27,4 @@ fn main() {
     // event_loop.set_control_flow(ControlFlow::Poll);
     event_loop.set_control_flow(ControlFlow::Wait);
     event_loop.run_app(&mut app).unwrap();
-}
-
-#[derive(Default)]
-struct App {
-    window: Option<Arc<Window>>,
-    renderer: Option<Renderer>,
-    state: Option<State>,
-    controls: Option<Controls>,
-    gui: Option<Gui>,
-}
-
-impl ApplicationHandler for App {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        println!("Initialising...");
-
-        let size = LogicalSize::new(512.0, 512.0);
-        let window = Arc::new(
-            event_loop
-                .create_window(
-                    Window::default_attributes()
-                        .with_title("rust-renderer")
-                        .with_inner_size(size),
-                )
-                .expect("Failed to create window"),
-        );
-        println!("Window initialised");
-
-        let renderer = pollster::block_on(renderer::Renderer::new(
-            window.clone(),
-            Box::new(event_loop.owned_display_handle()),
-        ));
-        println!("WGPU initialised");
-
-        let state = State::new(&renderer.device, size);
-        println!("State initialised");
-
-        let controls = Controls::new();
-        println!("Controls initialised");
-
-        let gui = Gui::new(&renderer.device, &window, size);
-        println!("GUI initialised");
-
-        self.window = Some(window);
-        self.renderer = Some(renderer);
-        self.state = Some(state);
-        self.controls = Some(controls);
-        self.gui = Some(gui);
-
-        println!("Initialisation completed")
-    }
-
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        match event {
-            WindowEvent::CloseRequested => {
-                println!("The close button was pressed; stopping");
-                event_loop.exit();
-            }
-            WindowEvent::RedrawRequested => {
-                if let Some(renderer) = &mut self.renderer
-                    && let Some(state) = &mut self.state
-                    && let Some(controls) = &mut self.controls
-                {
-                    controls.update();
-                    state.update(&renderer.device, controls.get_view_mat().into());
-                    let (vertex_uniform, fragment_uniform) = state.get_global_uniforms();
-                    let objects = state.get_objects();
-                    let window = self.window.as_ref().expect("Failed to get window");
-                    let gui = &mut self.gui.as_mut().expect("Failed to get GUI");
-                    gui.begin_frame(window);
-
-                    renderer.render(
-                        objects,
-                        vertex_uniform,
-                        fragment_uniform,
-                        |device, queue, encoder, view| {
-                            gui.end_frame_and_draw(device, queue, encoder, window, view)
-                        },
-                    );
-                }
-
-                if let Some(window) = &self.window {
-                    window.request_redraw();
-                }
-            }
-            WindowEvent::KeyboardInput { event, .. } => {
-                if let Some(controls) = &mut self.controls {
-                    match controls.handle_key_input(event) {
-                        InputEventResult::RequestClose => {
-                            println!("Close requested by key input");
-                            let _ = fs::write(".restart-trigger", "restart");
-                            event_loop.exit()
-                        }
-                        InputEventResult::Ok => (),
-                    }
-                }
-            }
-            WindowEvent::Resized(new_size) => {
-                if let Some(renderer) = &mut self.renderer {
-                    renderer.resize(new_size);
-                }
-            }
-            _ => (),
-        }
-    }
 }

@@ -86,7 +86,7 @@ pub struct ObjectFragmentUniform {
     pub colour: [f32; 4],
 }
 
-pub struct State {
+pub struct Scene {
     initial_timestamp: Instant,
     last_timestamp: Instant,
     global_vertex_uniform: GlobalVertexUniform,
@@ -94,7 +94,7 @@ pub struct State {
     objects: Vec<Object>,
 }
 
-impl State {
+impl Scene {
     pub fn new(device: &Device, size: LogicalSize<f32>) -> Self {
         let timestamp = Instant::now();
 
@@ -135,24 +135,20 @@ impl State {
         }
     }
 
-    pub fn update(&mut self, device: &Device, view_mat: [[f32; 4]; 4]) {
+    pub fn update(&mut self, device: &Device, view_mat: [[f32; 4]; 4], time_elapsed: f32) {
         self.global_vertex_uniform.view_mat = view_mat;
-        // let now = Instant::now();
-        self.last_timestamp = Instant::now();
-        // let delta_time = now.duration_since(self.initial_timestamp).as_secs_f32();
-        let total_time = self.initial_timestamp.elapsed().as_secs_f32();
 
         let model_mat = create_model(
             (-0.8, -6.0, 2.4).into(),
             // (2.4, -0.5, 0.0).into(),
-            (total_time.sin(), total_time.cos(), total_time.cos()).into(),
+            (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
             (1.0, 1.0, 1.0).into(),
         );
 
         // let sphere_mat = create_model(
         //     (0.0, 0.0, 0.0).into(),
         //     // (2.4, -0.5, 0.0).into(),
-        //     (total_time.sin(), total_time.cos(), total_time.cos()).into(),
+        //     (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
         //     (1.0, 1.0, 1.0).into(),
         // );
         self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
