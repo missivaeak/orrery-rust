@@ -1,12 +1,11 @@
 use std::{fs, sync::Arc, time::Instant};
 
-use egui::frame;
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::WindowEvent,
+    event::{DeviceEvent, ElementState, WindowEvent},
     event_loop::ActiveEventLoop,
-    window::{Window, WindowId},
+    window::{CursorGrabMode, Window, WindowId},
 };
 
 use crate::{
@@ -17,16 +16,33 @@ use crate::{
     scene::Scene,
 };
 
-struct FrameCount {
-    last_index: usize,
-    frame_ms: [u128; 60],
+struct FrameCount<const N: usize> {
+    index: usize,
+    ready: bool,
+    frame_ms: [f32; N],
 }
 
-impl Default for FrameCount {
+impl<const N: usize> FrameCount<N> {
+    fn len(&self) -> usize {
+        N
+    }
+    fn advance(&mut self) {
+        if self.index + 1 == N {
+            self.ready = true;
+        }
+        self.index = (self.index + 1) % N;
+    }
+    fn set_frame(&mut self, frame_seconds: f32) {
+        self.frame_ms[self.index] = frame_seconds;
+    }
+}
+
+impl<const N: usize> Default for FrameCount<N> {
     fn default() -> Self {
         Self {
-            last_index: 0,
-            frame_ms: [0; 60],
+            index: 0,
+            ready: false,
+            frame_ms: [0.0166; N],
         }
     }
 }
@@ -38,7 +54,7 @@ pub struct App {
     scene: Option<Scene>,
     controls: Option<Controls>,
     gui: Option<Gui>,
-    frame_count: FrameCount,
+    frame_count: FrameCount<600>,
     initial_instant: Option<Instant>,
     last_instant: Option<Instant>,
 }
@@ -71,7 +87,12 @@ impl ApplicationHandler for App {
         let controls = Controls::new();
         println!("Controls initialised");
 
-        let gui = Gui::new(&renderer.device, &window, size);
+        let gui = Gui::new(
+            &renderer.device,
+            &window,
+            size,
+            renderer.get_texture_format(),
+        );
         println!("GUI initialised");
 
         self.window = Some(window);
@@ -85,6 +106,19 @@ impl ApplicationHandler for App {
         println!("Initialisation completed")
     }
 
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        if let DeviceEvent::MouseMotion { delta } = event
+            && let Some(controls) = &mut self.controls
+        {
+            controls.handle_mouse_move(delta);
+        }
+    }
+
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
@@ -93,20 +127,39 @@ impl ApplicationHandler for App {
             }
 
             WindowEvent::RedrawRequested => {
+                if let Some(last_instant) = self.last_instant
+                    && let frame_count = &mut self.frame_count
+                    && let Some(gui) = &mut self.gui
+                {
+                    let time_elapsed_frame =
+                        Instant::now().duration_since(last_instant).as_secs_f32();
+                    frame_count.advance();
+                    frame_count.set_frame(time_elapsed_frame * 1000.0);
+                    let average_frame_ms =
+                        frame_count.frame_ms.iter().sum::<f32>() / frame_count.len() as f32;
+                    if frame_count.ready {
+                        gui.set_frame_ms(average_frame_ms);
+                        frame_count.ready = false;
+                    }
+                }
+
+                self.last_instant = Some(Instant::now());
+
+                if let Some(gui) = &mut self.gui
+                    && let Some(controls) = &mut self.controls
+                {
+                    gui.set_camera_position(controls.camera_position);
+                }
+
                 if let Some(renderer) = &mut self.renderer
                     && let Some(scene) = &mut self.scene
                     && let Some(controls) = &mut self.controls
                     && let Some(gui) = &mut self.gui
                     && let Some(window) = &self.window
                     && let Some(initial_instant) = self.initial_instant
-                    && let Some(last_instant) = &self.last_instant
-                    && let frame_count = &mut self.frame_count
                 {
                     let time_elapsed_total = initial_instant.elapsed().as_secs_f32();
-                    let time_elapsed_frame = last_instant.elapsed().as_millis();
-                    let i = frame_count.last_index;
-                    frame_count.frame_ms[i] = time_elapsed_frame;
-                    frame_count.last_index = (i + 1) % 60;
+                    // println!("t: {:?}", time_elapsed_frame);
                     controls.update();
                     scene.update(
                         &renderer.device,
@@ -115,9 +168,7 @@ impl ApplicationHandler for App {
                     );
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
                     let objects = scene.get_objects();
-                    let average_frame_ms = frame_count.frame_ms.iter().sum::<u128>() as f32 / 60.0;
-                    gui.begin_frame(window, average_frame_ms);
-                    println!("{:?}", average_frame_ms);
+                    gui.begin_frame(window);
 
                     renderer.render(
                         objects,
@@ -132,10 +183,6 @@ impl ApplicationHandler for App {
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
-
-                // println!("{:?}", self.frame_count.frame_ms);
-
-                self.last_instant = Some(Instant::now());
             }
 
             WindowEvent::KeyboardInput { event, .. } => {
@@ -147,10 +194,46 @@ impl ApplicationHandler for App {
                             event_loop.exit()
                         }
                         InputEventResult::Ok => (),
+                        _ => (),
                     }
                 }
             }
 
+            WindowEvent::MouseInput { button, state, .. } => {
+                if let Some(controls) = &mut self.controls
+                    && let Some(window) = &mut self.window
+                    && state == ElementState::Pressed
+                {
+                    match controls.handle_mouse_input(button) {
+                        InputEventResult::RequestLockCursor => {
+                            window.set_cursor_visible(false);
+                            window
+                                .set_cursor_grab(CursorGrabMode::Locked)
+                                .expect("Failed to set cursor lock");
+                        }
+                        InputEventResult::RequestUnlockCursor => {
+                            window.set_cursor_visible(true);
+                            window
+                                .set_cursor_grab(CursorGrabMode::None)
+                                .expect("Failed to unset cursor lock");
+                        }
+                        _ => (),
+                    }
+                }
+            }
+
+            // WindowEvent::CursorMoved { position, .. } => {
+            //     if let Some(controls) = &mut self.controls
+            //     //     && let Some(window) = &mut self.window
+            //     //     && let InputEventResult::RequestMoveCursor { position } =
+            //     {
+            //         controls.handle_mouse_move(position);
+            //
+            //         // window
+            //         //     .set_cursor_position(position)
+            //         //     .expect("Failed to set cursor position");
+            //     }
+            // }
             WindowEvent::Resized(new_size) => {
                 if let Some(renderer) = &mut self.renderer
                     && let Some(gui) = &mut self.gui

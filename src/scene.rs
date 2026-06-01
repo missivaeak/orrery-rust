@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Vector2, Vector3};
 use wgpu::{
@@ -87,8 +85,6 @@ pub struct ObjectFragmentUniform {
 }
 
 pub struct Scene {
-    initial_timestamp: Instant,
-    last_timestamp: Instant,
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
     objects: Vec<Object>,
@@ -96,8 +92,6 @@ pub struct Scene {
 
 impl Scene {
     pub fn new(device: &Device, size: LogicalSize<f32>) -> Self {
-        let timestamp = Instant::now();
-
         let controls = Controls::new();
         let view_mat = controls.get_view_mat();
         let projection_mat = math::create_projection(size.width / size.height, true);
@@ -130,8 +124,6 @@ impl Scene {
             global_vertex_uniform,
             global_fragment_uniform,
             objects,
-            last_timestamp: timestamp,
-            initial_timestamp: timestamp,
         }
     }
 

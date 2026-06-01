@@ -1,6 +1,6 @@
-use cgmath::{InnerSpace, Matrix4, Point3, Vector3, Zero};
+use cgmath::{InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 use winit::{
-    event::{ElementState, KeyEvent},
+    event::{ElementState, KeyEvent, MouseButton},
     keyboard::{Key, NamedKey},
 };
 
@@ -8,6 +8,9 @@ use crate::helpers::math::create_view;
 pub enum InputEventResult {
     Ok,
     RequestClose,
+    RequestLockCursor,
+    RequestUnlockCursor,
+    CameraMoved,
 }
 
 pub struct Controls {
@@ -25,6 +28,7 @@ pub struct Controls {
     back_pressed: bool,
     up_pressed: bool,
     down_pressed: bool,
+    camera_controlled: bool,
 }
 
 impl Controls {
@@ -35,7 +39,7 @@ impl Controls {
             velocity: (0.0, 0.0, 0.0).into(),
             acceleration: (0.0, 0.0, 0.0).into(),
             movement_acceleration: 1.0,
-            max_velocity: 0.2,
+            max_velocity: 0.0001,
             breaking_fixed: 0.1,
             breaking_factor: 0.1,
             right_pressed: false,
@@ -44,6 +48,7 @@ impl Controls {
             back_pressed: false,
             up_pressed: false,
             down_pressed: false,
+            camera_controlled: false,
         }
     }
 
@@ -154,5 +159,42 @@ impl Controls {
             }
             _ => InputEventResult::Ok,
         }
+    }
+
+    pub fn handle_mouse_input(&mut self, button: MouseButton) -> InputEventResult {
+        match button {
+            MouseButton::Left => {
+                self.camera_controlled = !self.camera_controlled;
+                println!("{:?}", self.camera_controlled);
+                if self.camera_controlled {
+                    return InputEventResult::RequestLockCursor;
+                }
+                InputEventResult::RequestUnlockCursor
+            }
+            _ => InputEventResult::Ok,
+        }
+    }
+
+    pub fn handle_mouse_move(&mut self, (x_delta, y_delta): (f64, f64)) -> InputEventResult {
+        if self.camera_controlled {
+            let sensitivity = 0.002;
+
+            let yaw = -(x_delta as f32) * sensitivity;
+            let pitch = -(y_delta as f32) * sensitivity;
+
+            let up = Vector3::unit_z();
+            let right = self.camera_direction.cross(up).normalize();
+
+            let yaw_rot = Quaternion::from_axis_angle(up, Rad(yaw));
+            let pitch_rot = Quaternion::from_axis_angle(right, Rad(pitch));
+
+            self.camera_direction = (yaw_rot * pitch_rot)
+                .rotate_vector(self.camera_direction)
+                .normalize();
+
+            return InputEventResult::CameraMoved;
+        }
+
+        InputEventResult::Ok
     }
 }

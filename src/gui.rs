@@ -1,3 +1,4 @@
+use cgmath::Point3;
 use egui::{
     Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Shadow, ViewportId,
 };
@@ -14,10 +15,17 @@ pub struct Gui {
     renderer: Renderer,
     frame_started: bool,
     pub screen_descriptor: ScreenDescriptor,
+    average_frame_ms: Option<f32>,
+    camera_position: Option<Point3<f32>>,
 }
 
 impl Gui {
-    pub fn new(device: &Device, window: &Window, size: LogicalSize<f32>) -> Self {
+    pub fn new(
+        device: &Device,
+        window: &Window,
+        size: LogicalSize<f32>,
+        texture_format: TextureFormat,
+    ) -> Self {
         let context = Context::default();
         let state = State::new(
             context,
@@ -27,11 +35,7 @@ impl Gui {
             Some(Theme::Light),
             Some(2 * 1024),
         );
-        let renderer = Renderer::new(
-            device,
-            TextureFormat::Rgba8UnormSrgb,
-            RendererOptions::default(),
-        );
+        let renderer = Renderer::new(device, texture_format, RendererOptions::default());
         Self {
             renderer,
             state,
@@ -40,6 +44,8 @@ impl Gui {
                 pixels_per_point: 1.0,
             },
             frame_started: false,
+            average_frame_ms: None,
+            camera_position: None,
         }
     }
 
@@ -47,7 +53,15 @@ impl Gui {
         self.state.egui_ctx().set_pixels_per_point(v);
     }
 
-    pub fn begin_frame(&mut self, window: &Window, average_frame_time: f32) {
+    pub fn set_frame_ms(&mut self, frame_ms: f32) {
+        self.average_frame_ms = Some(frame_ms);
+    }
+
+    pub fn set_camera_position(&mut self, camera_position: Point3<f32>) {
+        self.camera_position = Some(camera_position);
+    }
+
+    pub fn begin_frame(&mut self, window: &Window) {
         let raw_input = self.state.take_egui_input(window);
         let context = self.state.egui_ctx();
         context.begin_pass(raw_input);
@@ -78,29 +92,42 @@ impl Gui {
                         // ui.set_min_width(120.0);
 
                         egui::Grid::new("stats_grid").num_columns(2).show(ui, |ui| {
+                            let fps: String = if let Some(average_frame_ms) = &self.average_frame_ms
+                            {
+                                format!("{:.1}", (average_frame_ms / 1000.0).powi(-1))
+                            } else {
+                                "-".to_string()
+                            };
+
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                 ui.label("FPS:");
                             });
-                            let fps = (60.0 / (average_frame_time * 1000.0)).to_string();
                             ui.label(fps);
                             ui.end_row();
 
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("X:");
-                            });
-                            ui.label("2");
+                            ui.label("");
+                            ui.label("X/F");
+                            ui.label("Y/R");
+                            ui.label("Z/U");
                             ui.end_row();
 
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Y:");
-                            });
-                            ui.label("3");
-                            ui.end_row();
+                            let (x, y, z): (String, String, String) =
+                                if let Some(camera_position) = self.camera_position {
+                                    (
+                                        format!("{:.1}", camera_position.x),
+                                        format!("{:.1}", camera_position.y),
+                                        format!("{:.1}", camera_position.z),
+                                    )
+                                } else {
+                                    ("-".to_string(), "-".to_string(), "-".to_string())
+                                };
 
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Z:");
+                                ui.label("Pos:");
                             });
-                            ui.label("4");
+                            ui.label(x);
+                            ui.label(y);
+                            ui.label(z);
                             ui.end_row();
                         });
                     });

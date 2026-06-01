@@ -87,6 +87,7 @@ impl Renderer {
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         let format = surface_capabilities.formats[0];
+        println!("{:?}", surface_capabilities);
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format,
@@ -119,6 +120,10 @@ impl Renderer {
             size,
             render_group_map,
         }
+    }
+
+    pub fn get_texture_format(&self) -> TextureFormat {
+        self.config.format
     }
 
     pub fn render<F>(
