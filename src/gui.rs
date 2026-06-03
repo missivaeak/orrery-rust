@@ -92,19 +92,6 @@ impl Gui {
                         // ui.set_min_width(120.0);
 
                         egui::Grid::new("stats_grid").num_columns(2).show(ui, |ui| {
-                            let fps: String = if let Some(average_frame_ms) = &self.average_frame_ms
-                            {
-                                format!("{:.1}", (average_frame_ms / 1000.0).powi(-1))
-                            } else {
-                                "-".to_string()
-                            };
-
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("FPS:");
-                            });
-                            ui.label(fps);
-                            ui.end_row();
-
                             ui.label("");
                             ui.label("X/F");
                             ui.label("Y/R");
@@ -128,6 +115,19 @@ impl Gui {
                             ui.label(x);
                             ui.label(y);
                             ui.label(z);
+                            ui.end_row();
+
+                            let fps: String = if let Some(average_frame_ms) = &self.average_frame_ms
+                            {
+                                format!("{:.1}", (average_frame_ms / 1000.0).powi(-1))
+                            } else {
+                                "-".to_string()
+                            };
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("FPS:");
+                            });
+                            ui.label(fps);
                             ui.end_row();
                         });
                     });

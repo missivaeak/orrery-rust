@@ -12,6 +12,7 @@ use crate::{
     primitives::{
         cube::{cube_normals, cube_positions, cube_uvs},
         sphere::sphere_data,
+        surface::surface_data,
     },
     renderer::RenderGroupType,
 };
@@ -91,8 +92,7 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(device: &Device, size: LogicalSize<f32>) -> Self {
-        let controls = Controls::new();
+    pub fn new(device: &Device, controls: &Controls, size: LogicalSize<f32>) -> Self {
         let view_mat = controls.get_view_mat();
         let projection_mat = math::create_projection(size.width / size.height, true);
         let mut objects = Vec::new();
@@ -119,6 +119,7 @@ impl Scene {
 
         objects.push(get_cube_object(device));
         objects.push(get_sphere_object(device));
+        objects.push(get_surface_object(device));
 
         Self {
             global_vertex_uniform,
@@ -137,12 +138,12 @@ impl Scene {
             (1.0, 1.0, 1.0).into(),
         );
 
-        // let sphere_mat = create_model(
-        //     (0.0, 0.0, 0.0).into(),
-        //     // (2.4, -0.5, 0.0).into(),
-        //     (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
-        //     (1.0, 1.0, 1.0).into(),
-        // );
+        let sphere_mat = create_model(
+            (-10.0, 0.0, 0.0).into(),
+            // (2.4, -0.5, 0.0).into(),
+            (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
+            (1.0, 1.0, 1.0).into(),
+        );
         self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Object Vertex Uniform Buffer"),
             contents: bytemuck::bytes_of(&ObjectVertexUniform {
@@ -151,8 +152,14 @@ impl Scene {
             }),
             usage: BufferUsages::UNIFORM,
         });
-        // self.objects[1].renderable.vertex_uniform.model_mat = sphere_mat.into();
-        // self.objects[1].renderable.vertex_uniform.normal_mat = it_mat4(sphere_mat).into();
+        self.objects[1].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Object Vertex Uniform Buffer sphere"),
+            contents: bytemuck::bytes_of(&ObjectVertexUniform {
+                model_mat: sphere_mat.into(),
+                normal_mat: it_mat4(sphere_mat).into(),
+            }),
+            usage: BufferUsages::UNIFORM,
+        });
 
         // for object in self.objects.iter_mut() {
         //     object.renderable.vertex_uniform.model_mat = model_mat.into();
@@ -216,6 +223,50 @@ fn get_cube_object(device: &Device) -> Object {
 
 fn get_sphere_object(device: &Device) -> Object {
     let (positions, normals, uvs) = sphere_data(1.1, 15, 30);
+    let vertices = {
+        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(Vertex::new(positions[i], normals[i], uvs[i]));
+        }
+        data
+    };
+    let model_mat = math::create_model(
+        (0.0, 0.0, 0.0).into(),
+        (0.0, 0.0, 0.0).into(),
+        (1.0, 1.0, 1.0).into(),
+    );
+    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+        label: Some("Object Vertex Uniform Buffer"),
+        contents: bytemuck::bytes_of(&ObjectVertexUniform {
+            model_mat: model_mat.into(),
+            normal_mat: it_mat4(model_mat).into(),
+        }),
+        usage: BufferUsages::UNIFORM,
+    });
+    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+        label: Some("Object Fragment Uniform Buffer"),
+        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
+            colour: (0.5, 0.0, 1.0, 1.0).into(),
+        }),
+        usage: BufferUsages::UNIFORM,
+    });
+    let buffer = device.create_buffer_init(&BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(&vertices),
+        usage: BufferUsages::VERTEX,
+    });
+
+    Object {
+        render_group_type: RenderGroupType::Lit,
+        buffer_length: vertices.len() as u32,
+        buffer,
+        vertex_uniform_buffer,
+        fragment_uniform_buffer,
+    }
+}
+
+fn get_surface_object(device: &Device) -> Object {
+    let (positions, normals, uvs) = surface_data();
     let vertices = {
         let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
         for i in 0..positions.len() {

@@ -23,7 +23,7 @@ pub fn create_view(camera_position: Point3<f32>, camera_direction: Vector3<f32>)
 
 pub fn create_projection(aspect: f32, is_perspective: bool) -> Matrix4<f32> {
     match is_perspective {
-        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 5.0), aspect, 0.1, 100.0),
+        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 100.0),
         false => NORMALISATION_MATRIX * ortho(-4.0, 4.0, -3.0, 3.0, -1.0, 6.0),
     }
 }
@@ -55,4 +55,20 @@ pub fn spherical_to_cartesian(radius: f32, theta: Deg<f32>, phi: Deg<f32>) -> Ve
     let z = -radius * theta.sin() * phi.sin();
 
     Vector3::new(x, y, z)
+}
+
+pub struct Aabb3 {
+    pub x_min: f32,
+    pub x_max: f32,
+    pub y_min: f32,
+    pub y_max: f32,
+    pub z_min: f32,
+    pub z_max: f32,
+}
+
+pub struct Aabb2 {
+    pub x_min: f32,
+    pub x_max: f32,
+    pub y_min: f32,
+    pub y_max: f32,
 }

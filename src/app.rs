@@ -81,11 +81,11 @@ impl ApplicationHandler for App {
         ));
         println!("WGPU initialised");
 
-        let scene = Scene::new(&renderer.device, size);
-        println!("Scene initialised");
-
         let controls = Controls::new();
         println!("Controls initialised");
+
+        let scene = Scene::new(&renderer.device, &controls, size);
+        println!("Scene initialised");
 
         let gui = Gui::new(
             &renderer.device,
@@ -222,18 +222,6 @@ impl ApplicationHandler for App {
                 }
             }
 
-            // WindowEvent::CursorMoved { position, .. } => {
-            //     if let Some(controls) = &mut self.controls
-            //     //     && let Some(window) = &mut self.window
-            //     //     && let InputEventResult::RequestMoveCursor { position } =
-            //     {
-            //         controls.handle_mouse_move(position);
-            //
-            //         // window
-            //         //     .set_cursor_position(position)
-            //         //     .expect("Failed to set cursor position");
-            //     }
-            // }
             WindowEvent::Resized(new_size) => {
                 if let Some(renderer) = &mut self.renderer
                     && let Some(gui) = &mut self.gui
