@@ -1,5 +1,6 @@
 use cgmath::{InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 use winit::{
+    dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton},
     keyboard::{Key, NamedKey},
 };
@@ -29,6 +30,7 @@ pub struct Controls {
     up_pressed: bool,
     down_pressed: bool,
     camera_controlled: bool,
+    cursor_position: Option<PhysicalPosition<f64>>,
 }
 
 impl Controls {
@@ -49,6 +51,7 @@ impl Controls {
             up_pressed: false,
             down_pressed: false,
             camera_controlled: false,
+            cursor_position: None,
         }
     }
 
@@ -161,17 +164,27 @@ impl Controls {
         }
     }
 
-    pub fn handle_mouse_input(&mut self, button: MouseButton) -> InputEventResult {
-        match button {
-            MouseButton::Left => {
-                self.camera_controlled = !self.camera_controlled;
-                println!("{:?}", self.camera_controlled);
-                if self.camera_controlled {
-                    return InputEventResult::RequestLockCursor;
-                }
+    pub fn handle_mouse_input<F>(
+        &mut self,
+        button: MouseButton,
+        mut is_intersecting_gui: F,
+    ) -> InputEventResult
+    where
+        F: FnMut(&PhysicalPosition<f64>) -> bool,
+    {
+        if let Some(cursor_position) = &mut self.cursor_position
+            && !is_intersecting_gui(cursor_position)
+            && button == MouseButton::Left
+        {
+            self.camera_controlled = !self.camera_controlled;
+
+            if self.camera_controlled {
+                InputEventResult::RequestLockCursor
+            } else {
                 InputEventResult::RequestUnlockCursor
             }
-            _ => InputEventResult::Ok,
+        } else {
+            InputEventResult::Ok
         }
     }
 
@@ -195,6 +208,11 @@ impl Controls {
             return InputEventResult::CameraMoved;
         }
 
+        InputEventResult::Ok
+    }
+
+    pub fn set_cursor_position(&mut self, position: PhysicalPosition<f64>) -> InputEventResult {
+        self.cursor_position = Some(position);
         InputEventResult::Ok
     }
 }

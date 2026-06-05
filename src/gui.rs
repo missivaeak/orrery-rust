@@ -1,22 +1,25 @@
-use cgmath::Point3;
+use cgmath::{Point3, num_traits::ToPrimitive};
 use egui::{
-    Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Shadow, ViewportId,
+    Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Shadow,
+    ViewportId,
 };
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use egui_winit::State;
 use wgpu::{CommandEncoder, Device, Queue, StoreOp, TextureFormat, TextureView};
 use winit::{
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
     window::{Theme, Window},
 };
 
 pub struct Gui {
-    state: State,
+    pub state: State,
     renderer: Renderer,
     frame_started: bool,
     pub screen_descriptor: ScreenDescriptor,
     average_frame_ms: Option<f32>,
     camera_position: Option<Point3<f32>>,
+    rects: Vec<Rect>,
+    pub wireframe_enabled: bool,
 }
 
 impl Gui {
@@ -46,6 +49,8 @@ impl Gui {
             frame_started: false,
             average_frame_ms: None,
             camera_position: None,
+            rects: Vec::with_capacity(10),
+            wireframe_enabled: true,
         }
     }
 
@@ -61,12 +66,25 @@ impl Gui {
         self.camera_position = Some(camera_position);
     }
 
+    pub fn is_intersecting(&self, position: &PhysicalPosition<f64>) -> bool {
+        let pos = Pos2 {
+            x: position.x.to_f32().unwrap(),
+            y: position.y.to_f32().unwrap(),
+        };
+        for rect in self.rects.iter() {
+            if rect.contains(pos) {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn begin_frame(&mut self, window: &Window) {
         let raw_input = self.state.take_egui_input(window);
         let context = self.state.egui_ctx();
         context.begin_pass(raw_input);
 
-        Area::new("debug_widget".into())
+        let debug_widget = Area::new("debug_widget".into())
             .anchor(Align2::RIGHT_BOTTOM, [0.0, 0.0])
             .show(context, |ui| {
                 Frame::new()
@@ -129,10 +147,22 @@ impl Gui {
                             });
                             ui.label(fps);
                             ui.end_row();
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("Wiref.");
+                            });
+                            if ui
+                                .checkbox(&mut self.wireframe_enabled, "Checked")
+                                .changed()
+                            {
+                                println!("new value: {}", self.wireframe_enabled);
+                            }
+                            ui.end_row();
                         });
                     });
             });
 
+        self.rects = [debug_widget.response.rect].to_vec();
         self.frame_started = true;
     }
 

@@ -32,13 +32,15 @@ struct Interpolators {
     @location(0) w_position: vec3f,
     @location(1) w_normal: vec3f,
     @location(2) uv: vec2f,
+    @location(3) colour: vec4f,
 }
 
 @vertex
 fn vs_main(
     @location(0) o_position: vec4f,
     @location(1) o_normal: vec4f,
-    @location(2) uv: vec2f
+    @location(2) uv: vec2f,
+    @location(3) colour: vec4f
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
     var out: Interpolators;
@@ -46,6 +48,7 @@ fn vs_main(
     out.w_position = (OVU.model_mat * o_position).xyz;
     out.c_position = mvp * o_position;
     out.uv = uv;
+    out.colour = colour;
     return out;
 }
 
@@ -54,8 +57,8 @@ fn fs_main(
     @location(0) w_position: vec3f,
     @location(1) w_normal: vec3f,
     @location(2) uv: vec2f,
+    @location(3) colour: vec4f
 ) -> @location(0) vec4f {
-    let colour = vec3(uv, 0.0);
     let normal_dir = normalize(w_normal);
     let light_dir = normalize(GFU.light_position.xyz - w_position);
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
@@ -65,5 +68,5 @@ fn fs_main(
     let specular = GFU.specular_intensity * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
-    return vec4(colour * (ambient + diffuse) + GFU.specular_colour.rgb * specular, 1.0);
+    return vec4(colour.xyz * (ambient + diffuse) + GFU.specular_colour.rgb * specular, 1.0);
 }

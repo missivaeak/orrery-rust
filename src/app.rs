@@ -120,6 +120,14 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        if let Some(gui) = &mut self.gui
+            && let Some(window) = &self.window
+            && gui.state.on_window_event(window, &event).consumed
+        {
+            // egui used this event
+            return;
+        }
+
         match event {
             WindowEvent::CloseRequested => {
                 println!("The close button was pressed; stopping");
@@ -159,7 +167,6 @@ impl ApplicationHandler for App {
                     && let Some(initial_instant) = self.initial_instant
                 {
                     let time_elapsed_total = initial_instant.elapsed().as_secs_f32();
-                    // println!("t: {:?}", time_elapsed_frame);
                     controls.update();
                     scene.update(
                         &renderer.device,
@@ -168,6 +175,8 @@ impl ApplicationHandler for App {
                     );
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
                     let objects = scene.get_objects();
+                    let render_wireframe = gui.wireframe_enabled;
+
                     gui.begin_frame(window);
 
                     renderer.render(
@@ -177,6 +186,7 @@ impl ApplicationHandler for App {
                         |device, queue, encoder, view| {
                             gui.end_frame_and_draw(device, queue, encoder, window, view)
                         },
+                        render_wireframe,
                     );
                 }
 
@@ -199,12 +209,21 @@ impl ApplicationHandler for App {
                 }
             }
 
+            WindowEvent::CursorMoved { position, .. } => {
+                if let Some(controls) = &mut self.controls {
+                    controls.set_cursor_position(position);
+                }
+            }
+
             WindowEvent::MouseInput { button, state, .. } => {
                 if let Some(controls) = &mut self.controls
                     && let Some(window) = &mut self.window
+                    && let Some(gui) = &self.gui
                     && state == ElementState::Pressed
                 {
-                    match controls.handle_mouse_input(button) {
+                    match controls.handle_mouse_input(button, |cursor_position| {
+                        gui.is_intersecting(cursor_position)
+                    }) {
                         InputEventResult::RequestLockCursor => {
                             window.set_cursor_visible(false);
                             window

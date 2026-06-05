@@ -1,5 +1,6 @@
 use crate::helpers::constants::BACKGROUND_COLOUR;
-use crate::scene::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
+use crate::helpers::rendering::{Object, Vertex};
+use crate::scene::{GlobalFragmentUniform, GlobalVertexUniform};
 use std::{borrow::Cow, sync::Arc};
 
 use egui_wgpu::wgpu::Instance;
@@ -18,20 +19,20 @@ use wgpu::{
     VertexState,
     wgt::{CommandEncoderDescriptor, TextureViewDescriptor},
 };
-use wgpu::{CommandEncoder, Queue, TextureView};
+use wgpu::{CommandEncoder, PolygonMode, Queue, TextureView};
 use winit::dpi::PhysicalSize;
 use winit::event_loop::OwnedDisplayHandle;
 use winit::window::Window;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub enum RenderGroupType {
-    Clear,
+    // Clear,
     Unlit,
     Lit,
 }
 
 impl RenderGroupType {
-    const VALUES: [Self; 3] = [Self::Clear, Self::Lit, Self::Unlit];
+    const VALUES: [Self; 2] = [Self::Lit, Self::Unlit];
 }
 
 struct RenderGroup {
@@ -48,6 +49,7 @@ pub struct Renderer {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     render_group_map: HashMap<RenderGroupType, RenderGroup>,
+    wireframe_render_group: RenderGroup,
 }
 
 impl Renderer {
@@ -78,7 +80,7 @@ impl Renderer {
         let (device, queue) = adapter
             .request_device(&DeviceDescriptor {
                 label: None,
-                required_features: Features::empty(),
+                required_features: Features::POLYGON_MODE_LINE,
                 required_limits: Limits::default(),
                 ..Default::default()
             })
@@ -87,7 +89,6 @@ impl Renderer {
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         let format = surface_capabilities.formats[0];
-        println!("{:?}", surface_capabilities);
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format,
@@ -107,10 +108,11 @@ impl Renderer {
             get_unlit_render_group(&device, &config),
         );
         render_group_map.insert(RenderGroupType::Lit, get_lit_render_group(&device, &config));
-        render_group_map.insert(
-            RenderGroupType::Clear,
-            get_clear_render_group(&device, &config),
-        );
+        // render_group_map.insert(
+        //     RenderGroupType::Clear,
+        //     get_clear_render_group(&device, &config),
+        // );
+        let wireframe_render_group = get_wireframe_render_group(&device, &config);
 
         Self {
             surface,
@@ -119,6 +121,7 @@ impl Renderer {
             config,
             size,
             render_group_map,
+            wireframe_render_group,
         }
     }
 
@@ -132,6 +135,7 @@ impl Renderer {
         global_vertex_uniform: &GlobalVertexUniform,
         global_fragment_uniform: &GlobalFragmentUniform,
         mut egui_render: F,
+        render_wireframes: bool,
     ) where
         F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView),
     {
@@ -258,11 +262,97 @@ impl Renderer {
                                     label: Some("Uniform Bind Group"),
                                 });
 
-                            rpass.set_pipeline(&render_group.render_pipeline);
-                            rpass.set_vertex_buffer(0, object.buffer.slice(..));
-                            rpass.set_bind_group(0, &uniform_bind_group, &[]);
-                            rpass.draw(0..object.buffer_length, 0..1);
+                            for mesh in object.meshes.iter() {
+                                rpass.set_pipeline(&render_group.render_pipeline);
+                                rpass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                                rpass.set_index_buffer(
+                                    mesh.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
+                                rpass.set_bind_group(0, &uniform_bind_group, &[]);
+                                rpass.draw_indexed(0..mesh.index_length, 0, 0..1);
+                            }
                         }
+                    }
+                }
+            }
+
+            if render_wireframes {
+                let mut wireframe_rpass = encoder.begin_render_pass(&RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Load,
+                            store: StoreOp::Store,
+                        },
+                        depth_slice: None,
+                    })],
+                    // depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                        view: &depth_view,
+                        depth_ops: Some(Operations {
+                            load: LoadOp::Load,
+                            store: StoreOp::Store,
+                        }),
+                        stencil_ops: None,
+                    }),
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                });
+
+                self.queue.write_buffer(
+                    &self.wireframe_render_group.global_vertex_uniform_buffer,
+                    0,
+                    bytemuck::bytes_of(global_vertex_uniform),
+                );
+                self.queue.write_buffer(
+                    &self.wireframe_render_group.global_fragment_uniform_buffer,
+                    0,
+                    bytemuck::bytes_of(global_fragment_uniform),
+                );
+
+                for object in objects.iter() {
+                    let uniform_bind_group = self.device.create_bind_group(&BindGroupDescriptor {
+                        layout: &self.wireframe_render_group.uniform_bind_group_layout,
+                        entries: &[
+                            BindGroupEntry {
+                                binding: 0,
+                                resource: self
+                                    .wireframe_render_group
+                                    .global_vertex_uniform_buffer
+                                    .as_entire_binding(),
+                            },
+                            BindGroupEntry {
+                                binding: 1,
+                                resource: self
+                                    .wireframe_render_group
+                                    .global_fragment_uniform_buffer
+                                    .as_entire_binding(),
+                            },
+                            BindGroupEntry {
+                                binding: 2,
+                                resource: object.vertex_uniform_buffer.as_entire_binding(),
+                            },
+                            BindGroupEntry {
+                                binding: 3,
+                                resource: object.fragment_uniform_buffer.as_entire_binding(),
+                            },
+                        ],
+                        label: Some("Uniform Bind Group"),
+                    });
+
+                    for mesh in object.meshes.iter() {
+                        wireframe_rpass.set_pipeline(&self.wireframe_render_group.render_pipeline);
+                        wireframe_rpass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                        wireframe_rpass.set_index_buffer(
+                            mesh.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint16,
+                        );
+                        wireframe_rpass.set_bind_group(0, &uniform_bind_group, &[]);
+                        wireframe_rpass.draw_indexed(0..mesh.index_length, 0, 0..1);
                     }
                 }
             }
@@ -537,8 +627,129 @@ fn get_lit_render_group(device: &Device, config: &SurfaceConfiguration) -> Rende
     }
 }
 
-fn get_clear_render_group(device: &Device, config: &SurfaceConfiguration) -> RenderGroup {
-    let source = ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/lit.wgsl")));
+// fn get_clear_render_group(device: &Device, config: &SurfaceConfiguration) -> RenderGroup {
+//     let source = ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/lit.wgsl")));
+//     let shader = device.create_shader_module(ShaderModuleDescriptor {
+//         label: None,
+//         source,
+//     });
+//
+//     let global_vertex_uniform_buffer = device.create_buffer(&BufferDescriptor {
+//         label: Some("Global Vertex Uniform Buffer"),
+//         size: size_of::<GlobalVertexUniform>() as u64,
+//         usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+//         mapped_at_creation: false,
+//     });
+//
+//     let global_fragment_uniform_buffer = device.create_buffer(&BufferDescriptor {
+//         label: Some("Global Fragment Uniform Buffer"),
+//         size: size_of::<GlobalFragmentUniform>() as u64,
+//         usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+//         mapped_at_creation: false,
+//     });
+//
+//     let uniform_bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+//         entries: &[
+//             BindGroupLayoutEntry {
+//                 binding: 0,
+//                 visibility: ShaderStages::VERTEX,
+//                 ty: BindingType::Buffer {
+//                     ty: BufferBindingType::Uniform,
+//                     has_dynamic_offset: false,
+//                     min_binding_size: None,
+//                 },
+//                 count: None,
+//             },
+//             BindGroupLayoutEntry {
+//                 binding: 1,
+//                 visibility: ShaderStages::FRAGMENT,
+//                 ty: BindingType::Buffer {
+//                     ty: BufferBindingType::Uniform,
+//                     has_dynamic_offset: false,
+//                     min_binding_size: None,
+//                 },
+//                 count: None,
+//             },
+//             BindGroupLayoutEntry {
+//                 binding: 2,
+//                 visibility: ShaderStages::VERTEX,
+//                 ty: BindingType::Buffer {
+//                     ty: BufferBindingType::Uniform,
+//                     has_dynamic_offset: false,
+//                     min_binding_size: None,
+//                 },
+//                 count: None,
+//             },
+//             BindGroupLayoutEntry {
+//                 binding: 3,
+//                 visibility: ShaderStages::FRAGMENT,
+//                 ty: BindingType::Buffer {
+//                     ty: BufferBindingType::Uniform,
+//                     has_dynamic_offset: false,
+//                     min_binding_size: None,
+//                 },
+//                 count: None,
+//             },
+//         ],
+//         label: Some("Unlit Uniform Bind Group Layout"),
+//     });
+//
+//     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+//         label: Some("Unlit Pipeline Layout"),
+//         bind_group_layouts: &[Some(&uniform_bind_group_layout)],
+//         immediate_size: 0,
+//     });
+//
+//     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+//         label: Some("Render Pipeline"),
+//         layout: Some(&pipeline_layout),
+//         vertex: VertexState {
+//             module: &shader,
+//             entry_point: Some("vs_main"),
+//             buffers: &[Vertex::desc()],
+//             compilation_options: PipelineCompilationOptions::default(),
+//         },
+//         fragment: Some(FragmentState {
+//             module: &shader,
+//             entry_point: Some("fs_main"),
+//             targets: &[Some(ColorTargetState {
+//                 format: config.format,
+//                 blend: Some(BlendState {
+//                     color: BlendComponent::REPLACE,
+//                     alpha: BlendComponent::REPLACE,
+//                 }),
+//                 write_mask: ColorWrites::ALL,
+//             })],
+//             compilation_options: PipelineCompilationOptions::default(),
+//         }),
+//         primitive: PrimitiveState {
+//             topology: PrimitiveTopology::TriangleList,
+//             strip_index_format: None,
+//             // cull_mode: Some(Face::Back),
+//             ..Default::default()
+//         },
+//         depth_stencil: Some(DepthStencilState {
+//             format: TextureFormat::Depth24Plus,
+//             depth_write_enabled: Some(true),
+//             depth_compare: Some(CompareFunction::LessEqual),
+//             stencil: StencilState::default(),
+//             bias: DepthBiasState::default(),
+//         }),
+//         multisample: MultisampleState::default(),
+//         multiview_mask: None,
+//         cache: None,
+//     });
+//
+//     RenderGroup {
+//         render_pipeline,
+//         uniform_bind_group_layout,
+//         global_vertex_uniform_buffer,
+//         global_fragment_uniform_buffer,
+//     }
+// }
+
+fn get_wireframe_render_group(device: &Device, config: &SurfaceConfiguration) -> RenderGroup {
+    let source = ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/unlit.wgsl")));
     let shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
         source,
@@ -634,16 +845,22 @@ fn get_clear_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
         }),
         primitive: PrimitiveState {
             topology: PrimitiveTopology::TriangleList,
-            strip_index_format: None,
+            polygon_mode: PolygonMode::Line,
+            // strip_index_format: None,
             // cull_mode: Some(Face::Back),
             ..Default::default()
         },
+        // depth_stencil: None,
         depth_stencil: Some(DepthStencilState {
             format: TextureFormat::Depth24Plus,
-            depth_write_enabled: Some(true),
+            depth_write_enabled: Some(false),
             depth_compare: Some(CompareFunction::LessEqual),
             stencil: StencilState::default(),
-            bias: DepthBiasState::default(),
+            bias: DepthBiasState {
+                constant: -1,
+                slope_scale: -1.0,
+                clamp: 0.0,
+            },
         }),
         multisample: MultisampleState::default(),
         multiview_mask: None,

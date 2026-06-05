@@ -23,7 +23,7 @@ pub fn surface_data() -> SurfaceData {
     };
     let x_count = 30;
     let y_count = 30;
-    let (grid, height_range) = get_surface_grid(&sinc, aabb, x_count, y_count, 2.0, 0.7);
+    let (grid, height_range) = get_surface_grid(&sinc, aabb, x_count, y_count, 40.0, -2.00);
     let mut positions: Vec<Vector3<f32>> = Vec::with_capacity(4 * (x_count - 1) * (y_count - 1));
     let mut normals: Vec<Vector3<f32>> = Vec::with_capacity(4 * (x_count - 1) * (y_count - 1));
     let mut uvs: Vec<Vector2<f32>> = Vec::with_capacity(4 * (x_count - 1) * (y_count - 1));
@@ -129,8 +129,8 @@ fn normalise(point: [f32; 3], aabb: &Aabb3, scale: f32) -> [f32; 3] {
         z_max,
     } = aabb;
     [
-        scale * (-1.0 + 2.0 * (point[0] - x_min) / (x_max - x_min)),
-        scale * (-1.0 + 2.0 * (point[1] - y_min) / (y_max - y_min)),
-        scale * (-1.0 + 2.0 * (point[2] - z_min) / (z_max - z_min)),
+        scale * ((point[0] - x_min) / (x_max - x_min)),
+        scale * ((point[1] - y_min) / (y_max - y_min)),
+        scale * ((point[2] - z_min) / (z_max - z_min)),
     ]
 }
