@@ -1,7 +1,12 @@
-use cgmath::{InnerSpace, Vector2, Vector3};
+use std::ops::Div;
+
+use cgmath::{ElementWise, InnerSpace, Vector2, Vector3};
 use egui::emath::inverse_lerp;
 
-use crate::helpers::math::{Aabb2, Aabb3};
+use crate::helpers::{
+    math::{Aabb2, Aabb3},
+    rendering::{MeshData, Vertex},
+};
 
 type SurfaceData = (Vec<Vector3<f32>>, Vec<Vector3<f32>>, Vec<Vector2<f32>>);
 pub fn sinc(x: f32, y: f32) -> [f32; 3] {
@@ -14,7 +19,7 @@ fn map_to_height(height_range: [f32; 2], height: f32) -> f32 {
     inverse_lerp(height_range[0]..=height_range[1], height).expect("Failed to map to height range")
 }
 
-pub fn surface_data() -> SurfaceData {
+pub fn surface_data() -> MeshData {
     let aabb = Aabb2 {
         x_min: -8.0,
         x_max: 8.0,
@@ -62,7 +67,27 @@ pub fn surface_data() -> SurfaceData {
         }
     }
 
-    (positions, normals, uvs)
+    let vertices = {
+        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(Vertex::new(
+                positions[i],
+                normals[i],
+                uvs[i],
+                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
+            ));
+        }
+        data
+    };
+    let indices = {
+        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(i as u16);
+        }
+        data
+    };
+
+    MeshData { vertices, indices }
 }
 
 pub fn get_surface_grid(

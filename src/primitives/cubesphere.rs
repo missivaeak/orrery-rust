@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul};
 
-use cgmath::{ElementWise, InnerSpace, Vector2, Vector3, Vector4, num_traits::ToPrimitive};
+use cgmath::{ElementWise, Vector2, Vector3, num_traits::ToPrimitive};
 use wgpu::{
     BufferUsages, Device,
     util::{BufferInitDescriptor, DeviceExt},
@@ -8,7 +8,7 @@ use wgpu::{
 
 use crate::helpers::rendering::{Mesh, Vertex};
 
-pub fn create_cube_sphere_meshes(device: &Device, resolution: usize) -> Vec<Mesh> {
+pub fn create_cubesphere_meshes(device: &Device, resolution: usize) -> Vec<Mesh> {
     vec![
         create_face(device, Vector3::unit_x(), resolution + 1),
         create_face(device, Vector3::unit_x().mul(-1.0), resolution + 1),

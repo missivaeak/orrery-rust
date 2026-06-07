@@ -1,5 +1,35 @@
-use cgmath::{Vector2, Vector3};
+use std::ops::Div;
 
+use cgmath::{ElementWise, Vector2, Vector3};
+
+use crate::helpers::rendering::{MeshData, Vertex};
+
+pub fn get_cube_mesh_data() -> MeshData {
+    let positions = cube_positions();
+    let normals = cube_normals();
+    let uvs = cube_uvs();
+    let vertices = {
+        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(Vertex::new(
+                positions[i],
+                normals[i],
+                uvs[i],
+                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
+            ));
+        }
+        data
+    };
+    let indices = {
+        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(i as u16);
+        }
+        data
+    };
+
+    MeshData { vertices, indices }
+}
 pub fn cube_positions() -> Vec<Vector3<f32>> {
     [
         // front (0.0, 0.0, 1.0)

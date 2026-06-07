@@ -12,49 +12,20 @@ use crate::{
     controls::Controls,
     helpers::{
         math::{self, create_model, it_mat4},
-        rendering::{Mesh, Object, Vertex},
+        rendering::{
+            GlobalFragmentUniform, GlobalVertexUniform, Mesh, MeshData, Object,
+            ObjectFragmentUniform, ObjectVertexUniform, Vertex, get_mesh, get_object,
+        },
     },
     primitives::{
-        cube::{cube_normals, cube_positions, cube_uvs},
-        cube_sphere::create_cube_sphere_meshes,
+        cube::{cube_normals, cube_positions, cube_uvs, get_cube_mesh_data},
+        cubesphere::create_cubesphere_meshes,
+        octasphere::create_octasphere_mesh_data,
         sphere::sphere_data,
         surface::surface_data,
     },
     renderer::RenderGroupType,
 };
-
-#[repr(C, align(16))]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct GlobalVertexUniform {
-    pub view_mat: [[f32; 4]; 4],
-    pub projection_mat: [[f32; 4]; 4],
-}
-
-#[repr(C, align(16))]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct GlobalFragmentUniform {
-    pub camera_position: [f32; 4],
-    pub light_position: [f32; 4],
-    pub light_colour: [f32; 4],
-    pub specular_colour: [f32; 4],
-    pub ambient_intensity: f32,
-    pub diffuse_intensity: f32,
-    pub specular_intensity: f32,
-    pub specular_gloss: f32,
-}
-
-#[repr(C, align(16))]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct ObjectVertexUniform {
-    pub model_mat: [[f32; 4]; 4],
-    pub normal_mat: [[f32; 4]; 4],
-}
-
-#[repr(C, align(16))]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct ObjectFragmentUniform {
-    pub colour: [f32; 4],
-}
 
 pub struct Scene {
     global_vertex_uniform: GlobalVertexUniform,
@@ -88,10 +59,11 @@ impl Scene {
             specular_gloss: 30.0,
         };
 
-        objects.push(get_cube_object(device));
-        objects.push(get_sphere_object(device));
-        objects.push(get_surface_object(device));
-        objects.push(get_cube_sphere(device));
+        // objects.push(get_cube_object(device));
+        // objects.push(get_sphere_object(device));
+        // objects.push(get_surface_object(device));
+        // objects.push(get_cubesphere(device));
+        objects.push(get_octasphere(device));
 
         Self {
             global_vertex_uniform,
@@ -103,24 +75,18 @@ impl Scene {
     pub fn update(&mut self, device: &Device, view_mat: [[f32; 4]; 4], time_elapsed: f32) {
         self.global_vertex_uniform.view_mat = view_mat;
 
-        let model_mat = create_model(
+        let rotating_mat = create_model(
             (-0.8, -6.0, 2.4).into(),
             // (2.4, -0.5, 0.0).into(),
             (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
             (1.0, 1.0, 1.0).into(),
         );
 
-        // let sphere_mat = create_model(
-        //     (-10.0, 0.0, 0.0).into(),
-        //     // (2.4, -0.5, 0.0).into(),
-        //     (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
-        //     (1.0, 1.0, 1.0).into(),
-        // );
         self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Object Vertex Uniform Buffer"),
             contents: bytemuck::bytes_of(&ObjectVertexUniform {
-                model_mat: model_mat.into(),
-                normal_mat: it_mat4(model_mat).into(),
+                model_mat: rotating_mat.into(),
+                normal_mat: it_mat4(rotating_mat).into(),
             }),
             usage: BufferUsages::UNIFORM,
         });
@@ -149,232 +115,63 @@ impl Scene {
 }
 
 fn get_cube_object(device: &Device) -> Object {
-    let positions = cube_positions();
-    let normals = cube_normals();
-    let uvs = cube_uvs();
-    let vertices = {
-        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(Vertex::new(
-                positions[i],
-                normals[i],
-                uvs[i],
-                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
-            ));
-        }
-        data
-    };
-    let indices = {
-        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(i as u16);
-        }
-        data
-    };
-
+    let mesh_data = get_cube_mesh_data();
+    let mesh = get_mesh(&mesh_data, device);
     let model_mat = math::create_model(
         (0.0, 0.0, 0.0).into(),
         (0.0, 0.0, 0.0).into(),
         (1.0, 1.0, 1.0).into(),
     );
 
-    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Vertex Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectVertexUniform {
-            model_mat: model_mat.into(),
-            normal_mat: it_mat4(model_mat).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-
-    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Fragment Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
-            colour: (0.5, 0.0, 1.0, 1.0).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-
-    let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&vertices),
-        usage: BufferUsages::VERTEX,
-    });
-
-    let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&indices),
-        usage: BufferUsages::INDEX,
-    });
-    Object {
-        render_group_type: RenderGroupType::Lit,
-        vertex_uniform_buffer,
-        fragment_uniform_buffer,
-        meshes: [Mesh {
-            index_length: indices.len() as u32,
-            vertex_buffer,
-            index_buffer,
-        }]
-        .into(),
-    }
+    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
 }
 
 fn get_sphere_object(device: &Device) -> Object {
-    let (positions, normals, uvs) = sphere_data(1.1, 70, 70);
-    let vertices = {
-        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(Vertex::new(
-                positions[i],
-                normals[i],
-                uvs[i],
-                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
-            ));
-        }
-        data
-    };
-    let indices = {
-        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(i as u16);
-        }
-        data
-    };
+    let mesh_data = sphere_data(1.1, 70, 70);
+    let mesh = get_mesh(&mesh_data, device);
     let model_mat = math::create_model(
         (5.0, 0.0, 0.0).into(),
         (0.0, 0.0, 0.0).into(),
         (1.0, 1.0, 1.0).into(),
     );
-    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Vertex Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectVertexUniform {
-            model_mat: model_mat.into(),
-            normal_mat: it_mat4(model_mat).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Fragment Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
-            colour: (0.5, 0.0, 1.0, 1.0).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&vertices),
-        usage: BufferUsages::VERTEX,
-    });
-    let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&indices),
-        usage: BufferUsages::INDEX,
-    });
 
-    Object {
-        render_group_type: RenderGroupType::Lit,
-        vertex_uniform_buffer,
-        fragment_uniform_buffer,
-        meshes: [Mesh {
-            vertex_buffer,
-            index_buffer,
-            index_length: indices.len() as u32,
-        }]
-        .into(),
-    }
+    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
 }
 
 fn get_surface_object(device: &Device) -> Object {
-    let (positions, normals, uvs) = surface_data();
-    let vertices = {
-        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(Vertex::new(
-                positions[i],
-                normals[i],
-                uvs[i],
-                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
-            ));
-        }
-        data
-    };
-    let indices = {
-        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            data.push(i as u16);
-        }
-        data
-    };
+    let mesh_data = surface_data();
+    let mesh = get_mesh(&mesh_data, device);
     let model_mat = math::create_model(
         (0.0, 0.0, 0.0).into(),
         (0.0, 0.0, 0.0).into(),
         (1.0, 1.0, 1.0).into(),
     );
-    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Vertex Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectVertexUniform {
-            model_mat: model_mat.into(),
-            normal_mat: it_mat4(model_mat).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Fragment Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
-            colour: (0.5, 0.0, 1.0, 1.0).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&vertices),
-        usage: BufferUsages::VERTEX,
-    });
-    let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        contents: bytemuck::cast_slice(&indices),
-        usage: BufferUsages::INDEX,
-    });
 
-    Object {
-        render_group_type: RenderGroupType::Lit,
-        vertex_uniform_buffer,
-        fragment_uniform_buffer,
-        meshes: [Mesh {
-            vertex_buffer,
-            index_buffer,
-            index_length: indices.len() as u32,
-        }]
-        .into(),
-    }
+    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
 }
 
-fn get_cube_sphere(device: &Device) -> Object {
-    let meshes = create_cube_sphere_meshes(device, 20);
+fn get_cubesphere(device: &Device) -> Object {
+    let meshes = create_cubesphere_meshes(device, 20);
     let model_mat = math::create_model(
         (0.0, 0.0, 0.0).into(),
         (0.0, 0.0, 0.0).into(),
         (1.0, 1.0, 1.0).into(),
     );
-    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Vertex Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectVertexUniform {
-            model_mat: model_mat.into(),
-            normal_mat: it_mat4(model_mat).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Fragment Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
-            colour: (0.5, 0.0, 1.0, 1.0).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    Object {
-        render_group_type: RenderGroupType::Lit,
-        vertex_uniform_buffer,
-        fragment_uniform_buffer,
-        meshes,
-    }
+
+    get_object(device, model_mat, meshes, RenderGroupType::Lit)
+}
+
+fn get_octasphere(device: &Device) -> Object {
+    let mesh_datas = create_octasphere_mesh_data(5.0, 4);
+    let meshes: Vec<Mesh> = mesh_datas
+        .iter()
+        .map(|mesh_data| get_mesh(mesh_data, device))
+        .collect();
+    let model_mat = math::create_model(
+        (0.0, 0.0, 0.0).into(),
+        (0.0, 0.0, 0.0).into(),
+        (1.0, 1.0, 1.0).into(),
+    );
+
+    get_object(device, model_mat, meshes, RenderGroupType::Lit)
 }

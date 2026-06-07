@@ -1,10 +1,15 @@
-use cgmath::{Deg, Vector2, Vector3};
+use std::ops::Div;
 
-use crate::helpers::math::spherical_to_cartesian;
+use cgmath::{Deg, ElementWise, Vector2, Vector3};
+
+use crate::helpers::{
+    math::spherical_to_cartesian,
+    rendering::{MeshData, Vertex},
+};
 
 type SphereData = (Vec<Vector3<f32>>, Vec<Vector3<f32>>, Vec<Vector2<f32>>);
 
-pub fn sphere_data(radius: f32, u: usize, v: usize) -> SphereData {
+pub fn sphere_data(radius: f32, u: usize, v: usize) -> MeshData {
     let mut positions: Vec<Vector3<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));
     let mut normals: Vec<Vector3<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));
     let mut uvs: Vec<Vector2<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));
@@ -45,5 +50,25 @@ pub fn sphere_data(radius: f32, u: usize, v: usize) -> SphereData {
             uvs.push(Vector2::new(1.0, 1.0));
         }
     }
-    (positions, normals, uvs)
+    let vertices = {
+        let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(Vertex::new(
+                positions[i],
+                normals[i],
+                uvs[i],
+                normals[i].add_element_wise(1.0).div(2.0).extend(1.0),
+            ));
+        }
+        data
+    };
+    let indices = {
+        let mut data: Vec<u16> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            data.push(i as u16);
+        }
+        data
+    };
+
+    MeshData { vertices, indices }
 }

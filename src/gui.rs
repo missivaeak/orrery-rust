@@ -148,17 +148,21 @@ impl Gui {
                             ui.label(fps);
                             ui.end_row();
 
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Wiref.");
-                            });
-                            if ui
-                                .checkbox(&mut self.wireframe_enabled, "Checked")
-                                .changed()
-                            {
-                                println!("new value: {}", self.wireframe_enabled);
-                            }
+                            // ui.horizontal(|ui| {
+                            //     ui.label("he");
+                            // });
+                            // ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            //     ui.label("Wiref.");
+                            // });
+                            // if ui
+                            //     .checkbox(&mut self.wireframe_enabled, "Checked")
+                            //     .changed()
+                            // {
+                            //     println!("new value: {}", self.wireframe_enabled);
+                            // }
                             ui.end_row();
                         });
+                        ui.checkbox(&mut self.wireframe_enabled, "Mesh wireframe");
                     });
             });
 

@@ -1,6 +1,5 @@
 use crate::helpers::constants::BACKGROUND_COLOUR;
-use crate::helpers::rendering::{Object, Vertex};
-use crate::scene::{GlobalFragmentUniform, GlobalVertexUniform};
+use crate::helpers::rendering::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
 use std::{borrow::Cow, sync::Arc};
 
 use egui_wgpu::wgpu::Instance;
