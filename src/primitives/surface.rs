@@ -8,7 +8,6 @@ use crate::helpers::{
     rendering::{MeshData, Vertex},
 };
 
-type SurfaceData = (Vec<Vector3<f32>>, Vec<Vector3<f32>>, Vec<Vector2<f32>>);
 pub fn sinc(x: f32, y: f32) -> [f32; 3] {
     let r = (x * x + y * y).sqrt();
     let z = if r == 0.0 { 1.0 } else { r.sin() / r };

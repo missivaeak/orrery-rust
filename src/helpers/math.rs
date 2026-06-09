@@ -1,12 +1,6 @@
-use std::{
-    f32::consts::TAU,
-    ops::{Add, Mul},
-};
+use std::f32::consts::TAU;
 
-use cgmath::{
-    Angle, Deg, InnerSpace, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector2, Vector3, Vector4,
-    ortho, perspective,
-};
+use cgmath::{Angle, Deg, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective};
 
 // I want to use blender coordinates, right handed, Z up, Y forward, X right
 
@@ -77,22 +71,4 @@ pub struct Aabb2 {
     pub x_max: f32,
     pub y_min: f32,
     pub y_max: f32,
-}
-pub trait SlerpVector: Copy + InnerSpace<Scalar = f32> {}
-
-impl SlerpVector for Vector2<f32> {}
-impl SlerpVector for Vector3<f32> {}
-impl SlerpVector for Vector4<f32> {}
-
-pub fn slerp<V: SlerpVector>(a: V, b: V, t: f32) -> V {
-    let dot = a.dot(b).clamp(-1.0, 1.0);
-    let theta = dot.acos() * t;
-    // let relative = (b - a * dot).normalize();
-    let omega = dot.acos();
-    let sin_omega = omega.sin();
-
-    // a.mul(theta.cos()).add(relative.mul(theta.sin()))
-    a.mul(((1.0 - t) * omega).sin())
-        .div(sin_omega)
-        .add(b.mul((t * omega).sin()).div(sin_omega))
 }

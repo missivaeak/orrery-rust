@@ -1,12 +1,12 @@
 use bytemuck::{Pod, Zeroable};
-use cgmath::{InnerSpace, Matrix4, Vector2, Vector3, Vector4, VectorSpace};
+use cgmath::{Matrix4, Vector2, Vector3, Vector4};
 use wgpu::{
     Buffer, BufferAddress, BufferUsages, Device, VertexBufferLayout,
     util::{BufferInitDescriptor, DeviceExt},
 };
 
 use crate::{
-    helpers::math::{it_mat4, slerp},
+    helpers::math::{create_model, it_mat4},
     renderer::RenderGroupType,
 };
 
@@ -15,6 +15,67 @@ pub struct Object {
     pub vertex_uniform_buffer: Buffer,
     pub fragment_uniform_buffer: Buffer,
     pub meshes: Vec<Mesh>,
+}
+
+impl Object {
+    pub fn from_meshes(
+        device: &Device,
+        meshes: Vec<Mesh>,
+        model_mat: Option<Matrix4<f32>>,
+        render_group_type: Option<RenderGroupType>,
+    ) -> Self {
+        let _render_group_type = if let Some(render_group_type) = render_group_type {
+            render_group_type
+        } else {
+            RenderGroupType::Lit
+        };
+
+        let _model_mat = if let Some(model_mat) = model_mat {
+            model_mat
+        } else {
+            create_model(
+                (5.0, 0.0, 0.0).into(),
+                (0.0, 0.0, 0.0).into(),
+                (1.0, 1.0, 1.0).into(),
+            )
+        };
+
+        let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Object Vertex Uniform Buffer"),
+            contents: bytemuck::bytes_of(&ObjectVertexUniform {
+                model_mat: _model_mat.into(),
+                normal_mat: it_mat4(_model_mat).into(),
+            }),
+            usage: BufferUsages::UNIFORM,
+        });
+        let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Object Fragment Uniform Buffer"),
+            contents: bytemuck::bytes_of(&ObjectFragmentUniform {
+                colour: (0.5, 0.0, 1.0, 1.0).into(),
+            }),
+            usage: BufferUsages::UNIFORM,
+        });
+
+        Self {
+            render_group_type: _render_group_type,
+            vertex_uniform_buffer,
+            fragment_uniform_buffer,
+            meshes,
+        }
+    }
+
+    pub fn from_mesh_datas(
+        device: &Device,
+        mesh_datas: Vec<MeshData>,
+        model_mat: Option<Matrix4<f32>>,
+        render_group_type: Option<RenderGroupType>,
+    ) -> Self {
+        let meshes: Vec<Mesh> = mesh_datas
+            .iter()
+            .map(|mesh_data| get_mesh(mesh_data, device))
+            .collect();
+        Self::from_meshes(device, meshes, model_mat, render_group_type)
+    }
 }
 
 #[repr(C, align(16))]
@@ -83,44 +144,44 @@ impl Vertex {
         }
     }
 
-    pub fn lerp(&self, other: Vertex, t: f32) -> Vertex {
-        let position = self.get_position().lerp(other.get_position(), t);
-        let normal = self.get_normal().lerp(other.get_normal(), t).normalize();
-        let uv = self.get_uv().lerp(other.get_uv(), t);
-        let colour = self.get_colour().lerp(other.get_colour(), t);
-
-        Vertex::new(position, normal, uv, colour)
-    }
-
-    pub fn slerp(&self, other: Vertex, t: f32) -> Vertex {
-        let position = slerp(self.get_position(), other.get_position(), t);
-        let normal = slerp(self.get_normal(), other.get_normal(), t);
-        let uv = slerp(self.get_uv(), other.get_uv(), t);
-        let colour = slerp(self.get_colour(), other.get_colour(), t);
-
-        Vertex::new(position, normal, uv, colour)
-    }
-
-    pub fn get_position(&self) -> Vector3<f32> {
-        Vector3::new(self.position[0], self.position[1], self.position[2])
-    }
-
-    pub fn get_normal(&self) -> Vector3<f32> {
-        Vector3::new(self.normal[0], self.normal[1], self.normal[2])
-    }
-
-    pub fn get_uv(&self) -> Vector2<f32> {
-        Vector2::new(self.uv[0], self.uv[1])
-    }
-
-    pub fn get_colour(&self) -> Vector4<f32> {
-        Vector4::new(
-            self.colour[0],
-            self.colour[1],
-            self.colour[2],
-            self.colour[3],
-        )
-    }
+    // pub fn lerp(&self, other: Vertex, t: f32) -> Vertex {
+    //     let position = self.get_position().lerp(other.get_position(), t);
+    //     let normal = self.get_normal().lerp(other.get_normal(), t).normalize();
+    //     let uv = self.get_uv().lerp(other.get_uv(), t);
+    //     let colour = self.get_colour().lerp(other.get_colour(), t);
+    //
+    //     Vertex::new(position, normal, uv, colour)
+    // }
+    //
+    // pub fn slerp(&self, other: Vertex, t: f32) -> Vertex {
+    //     let position = slerp(self.get_position(), other.get_position(), t);
+    //     let normal = slerp(self.get_normal(), other.get_normal(), t);
+    //     let uv = slerp(self.get_uv(), other.get_uv(), t);
+    //     let colour = slerp(self.get_colour(), other.get_colour(), t);
+    //
+    //     Vertex::new(position, normal, uv, colour)
+    // }
+    //
+    // pub fn get_position(&self) -> Vector3<f32> {
+    //     Vector3::new(self.position[0], self.position[1], self.position[2])
+    // }
+    //
+    // pub fn get_normal(&self) -> Vector3<f32> {
+    //     Vector3::new(self.normal[0], self.normal[1], self.normal[2])
+    // }
+    //
+    // pub fn get_uv(&self) -> Vector2<f32> {
+    //     Vector2::new(self.uv[0], self.uv[1])
+    // }
+    //
+    // pub fn get_colour(&self) -> Vector4<f32> {
+    //     Vector4::new(
+    //         self.colour[0],
+    //         self.colour[1],
+    //         self.colour[2],
+    //         self.colour[3],
+    //     )
+    // }
 }
 
 pub struct Mesh {
@@ -154,31 +215,31 @@ pub fn get_mesh(mesh_data: &MeshData, device: &Device) -> Mesh {
     }
 }
 
-pub fn get_object(
-    device: &Device,
-    model_mat: Matrix4<f32>,
-    meshes: Vec<Mesh>,
-    render_group_type: RenderGroupType,
-) -> Object {
-    let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Vertex Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectVertexUniform {
-            model_mat: model_mat.into(),
-            normal_mat: it_mat4(model_mat).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Object Fragment Uniform Buffer"),
-        contents: bytemuck::bytes_of(&ObjectFragmentUniform {
-            colour: (0.5, 0.0, 1.0, 1.0).into(),
-        }),
-        usage: BufferUsages::UNIFORM,
-    });
-    Object {
-        render_group_type,
-        vertex_uniform_buffer,
-        fragment_uniform_buffer,
-        meshes,
-    }
-}
+// pub fn get_object(
+//     device: &Device,
+//     model_mat: Matrix4<f32>,
+//     meshes: Vec<Mesh>,
+//     render_group_type: RenderGroupType,
+// ) -> Object {
+//     let vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+//         label: Some("Object Vertex Uniform Buffer"),
+//         contents: bytemuck::bytes_of(&ObjectVertexUniform {
+//             model_mat: model_mat.into(),
+//             normal_mat: it_mat4(model_mat).into(),
+//         }),
+//         usage: BufferUsages::UNIFORM,
+//     });
+//     let fragment_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
+//         label: Some("Object Fragment Uniform Buffer"),
+//         contents: bytemuck::bytes_of(&ObjectFragmentUniform {
+//             colour: (0.5, 0.0, 1.0, 1.0).into(),
+//         }),
+//         usage: BufferUsages::UNIFORM,
+//     });
+//     Object {
+//         render_group_type,
+//         vertex_uniform_buffer,
+//         fragment_uniform_buffer,
+//         meshes,
+//     }
+// }

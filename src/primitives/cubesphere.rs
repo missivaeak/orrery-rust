@@ -69,8 +69,6 @@ fn create_face(device: &Device, normal: Vector3<f32>, resolution: usize) -> Mesh
         usage: BufferUsages::INDEX,
     });
 
-    println!("{:?}", vertices[30]);
-
     Mesh {
         vertex_buffer,
         index_buffer,

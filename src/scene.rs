@@ -1,7 +1,3 @@
-use std::ops::Div;
-
-use bytemuck::{Pod, Zeroable};
-use cgmath::{ElementWise, Vector4};
 use wgpu::{
     BufferUsages, Device,
     util::{BufferInitDescriptor, DeviceExt},
@@ -12,19 +8,12 @@ use crate::{
     controls::Controls,
     helpers::{
         math::{self, create_model, it_mat4},
-        rendering::{
-            GlobalFragmentUniform, GlobalVertexUniform, Mesh, MeshData, Object,
-            ObjectFragmentUniform, ObjectVertexUniform, Vertex, get_mesh, get_object,
-        },
+        rendering::{GlobalFragmentUniform, GlobalVertexUniform, Object, ObjectVertexUniform},
     },
     primitives::{
-        cube::{cube_normals, cube_positions, cube_uvs, get_cube_mesh_data},
-        cubesphere::create_cubesphere_meshes,
-        octasphere::create_octasphere_mesh_data,
-        sphere::sphere_data,
-        surface::surface_data,
+        cube::get_cube_mesh_data, cubesphere::create_cubesphere_meshes,
+        octasphere::create_octasphere_mesh_data, sphere::sphere_data, surface::surface_data,
     },
-    renderer::RenderGroupType,
 };
 
 pub struct Scene {
@@ -59,11 +48,36 @@ impl Scene {
             specular_gloss: 30.0,
         };
 
-        // objects.push(get_cube_object(device));
-        // objects.push(get_sphere_object(device));
-        // objects.push(get_surface_object(device));
-        // objects.push(get_cubesphere(device));
-        objects.push(get_octasphere(device));
+        objects.push(Object::from_mesh_datas(
+            device,
+            vec![get_cube_mesh_data()],
+            None,
+            None,
+        ));
+        objects.push(Object::from_mesh_datas(
+            device,
+            vec![sphere_data(1.1, 70, 70)],
+            None,
+            None,
+        ));
+        objects.push(Object::from_mesh_datas(
+            device,
+            vec![surface_data()],
+            None,
+            None,
+        ));
+        objects.push(Object::from_meshes(
+            device,
+            create_cubesphere_meshes(device, 2),
+            None,
+            None,
+        ));
+        objects.push(Object::from_mesh_datas(
+            device,
+            create_octasphere_mesh_data(5.0, 5),
+            None,
+            None,
+        ));
 
         Self {
             global_vertex_uniform,
@@ -112,66 +126,4 @@ impl Scene {
     pub fn get_global_uniforms(&self) -> (&GlobalVertexUniform, &GlobalFragmentUniform) {
         (&self.global_vertex_uniform, &self.global_fragment_uniform)
     }
-}
-
-fn get_cube_object(device: &Device) -> Object {
-    let mesh_data = get_cube_mesh_data();
-    let mesh = get_mesh(&mesh_data, device);
-    let model_mat = math::create_model(
-        (0.0, 0.0, 0.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        (1.0, 1.0, 1.0).into(),
-    );
-
-    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
-}
-
-fn get_sphere_object(device: &Device) -> Object {
-    let mesh_data = sphere_data(1.1, 70, 70);
-    let mesh = get_mesh(&mesh_data, device);
-    let model_mat = math::create_model(
-        (5.0, 0.0, 0.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        (1.0, 1.0, 1.0).into(),
-    );
-
-    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
-}
-
-fn get_surface_object(device: &Device) -> Object {
-    let mesh_data = surface_data();
-    let mesh = get_mesh(&mesh_data, device);
-    let model_mat = math::create_model(
-        (0.0, 0.0, 0.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        (1.0, 1.0, 1.0).into(),
-    );
-
-    get_object(device, model_mat, vec![mesh], RenderGroupType::Lit)
-}
-
-fn get_cubesphere(device: &Device) -> Object {
-    let meshes = create_cubesphere_meshes(device, 20);
-    let model_mat = math::create_model(
-        (0.0, 0.0, 0.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        (1.0, 1.0, 1.0).into(),
-    );
-
-    get_object(device, model_mat, meshes, RenderGroupType::Lit)
-}
-
-fn get_octasphere(device: &Device) -> Object {
-    let mesh_datas = create_octasphere_mesh_data(5.0, 4);
-    let meshes: Vec<Mesh> = mesh_datas
-        .iter()
-        .map(|mesh_data| get_mesh(mesh_data, device))
-        .collect();
-    let model_mat = math::create_model(
-        (0.0, 0.0, 0.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        (1.0, 1.0, 1.0).into(),
-    );
-
-    get_object(device, model_mat, meshes, RenderGroupType::Lit)
 }

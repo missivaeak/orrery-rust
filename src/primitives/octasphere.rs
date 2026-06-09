@@ -1,12 +1,5 @@
-use std::ops::{Add, Mul};
-
-use cgmath::{InnerSpace, Vector2, Vector3, VectorSpace};
-use wgpu::{
-    BufferUsages, Device,
-    util::{BufferInitDescriptor, DeviceExt},
-};
-
-use crate::helpers::rendering::{Mesh, MeshData, Vertex};
+use crate::helpers::rendering::{MeshData, Vertex};
+use cgmath::{InnerSpace, Vector3};
 
 struct Face {
     vectors: Vec<Vector3<f32>>,
@@ -77,18 +70,6 @@ fn get_mesh_data(face: &Face, radius: f32) -> MeshData {
     populate_mesh_data(face, radius, &mut mesh_data);
 
     mesh_data
-}
-
-fn interpolate_vertex(a: Vertex, b: Vertex, radius: f32) -> Vertex {
-    let position = a
-        .get_position()
-        .lerp(b.get_position(), 0.5)
-        .normalize_to(radius);
-    let normal = position.normalize();
-    let uv = a.get_uv().lerp(b.get_uv(), 0.5);
-    let colour = a.get_colour().lerp(b.get_colour(), 0.5);
-
-    Vertex::new(position, normal, uv, colour)
 }
 
 fn create_face(v1: Vector3<f32>, v2: Vector3<f32>, v3: Vector3<f32>, lod: usize) -> Face {

@@ -7,8 +7,6 @@ use crate::helpers::{
     rendering::{MeshData, Vertex},
 };
 
-type SphereData = (Vec<Vector3<f32>>, Vec<Vector3<f32>>, Vec<Vector2<f32>>);
-
 pub fn sphere_data(radius: f32, u: usize, v: usize) -> MeshData {
     let mut positions: Vec<Vector3<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));
     let mut normals: Vec<Vector3<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));
