@@ -1,11 +1,9 @@
-use std::time::Duration;
-
 use cgmath::{Matrix4, Quaternion, Vector3};
 use wgpu::{Device, Queue};
 
 use crate::{
     helpers::{
-        entity::Entity,
+        entity::{Entity, UpdateDescriptor},
         math::it_mat4,
         object::{Object, ObjectOptions, ObjectVertexUniform},
     },
@@ -36,12 +34,7 @@ impl PrettyCube {
 }
 
 impl Entity for PrettyCube {
-    fn update(
-        &mut self,
-        queue: &Queue,
-        _time_elapsed: Duration,
-        _delta_time: Duration,
-    ) -> Result<(), ()> {
+    fn update(&mut self, queue: &Queue, _update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
         let model_mat = Matrix4::from_translation(self.translation)
             * Matrix4::from(self.rotation)
             * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);

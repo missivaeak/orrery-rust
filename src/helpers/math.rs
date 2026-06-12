@@ -13,10 +13,12 @@ pub const NORMALISATION_MATRIX: Matrix4<f32> = Matrix4::new(
   0.0, 0.0, 0.5, 1.0
 );
 
-pub fn create_view(camera_position: Point3<f32>, camera_direction: Vector3<f32>) -> Matrix4<f32> {
+pub fn create_view(camera_position: Vector3<f32>, camera_direction: Vector3<f32>) -> Matrix4<f32> {
+    let camera_position_point =
+        Point3::new(camera_position.x, camera_position.y, camera_position.z);
     Matrix4::look_at_rh(
-        camera_position,
-        camera_position + camera_direction,
+        camera_position_point,
+        camera_position_point + camera_direction,
         Vector3::unit_z(),
     )
 }

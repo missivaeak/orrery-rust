@@ -6,17 +6,14 @@ use wgpu::{
 };
 
 use crate::helpers::{
-    entity::Entity,
+    entity::{Entity, UpdateDescriptor},
     math::it_mat4,
     mesh::Mesh,
     object::{Object, ObjectOptions, ObjectVertexUniform},
     vertex::Vertex,
 };
 
-use std::{
-    ops::{Add, Div, Mul},
-    time::Duration,
-};
+use std::ops::{Add, Div, Mul};
 
 pub struct CubeSphere {
     object: Object,
@@ -50,12 +47,7 @@ impl CubeSphere {
 }
 
 impl Entity for CubeSphere {
-    fn update(
-        &mut self,
-        queue: &Queue,
-        _time_elapsed: Duration,
-        _delta_time: Duration,
-    ) -> Result<(), ()> {
+    fn update(&mut self, queue: &Queue, _update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
         let model_mat = Matrix4::from_translation(self.translation)
             * Matrix4::from(self.rotation)
             * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);

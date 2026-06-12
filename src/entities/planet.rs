@@ -1,11 +1,9 @@
-use std::time::Duration;
-
 use cgmath::{Deg, InnerSpace, Matrix4, Quaternion, Rotation3, Vector3};
 
 use wgpu::{Device, Queue};
 
 use crate::helpers::{
-    entity::Entity,
+    entity::{Entity, UpdateDescriptor},
     math::it_mat4,
     mesh::MeshData,
     object::{Object, ObjectOptions, ObjectVertexUniform},
@@ -43,13 +41,8 @@ impl Planet {
 }
 
 impl Entity for Planet {
-    fn update(
-        &mut self,
-        queue: &Queue,
-        _total_time: Duration,
-        delta_time: Duration,
-    ) -> Result<(), ()> {
-        let dt = delta_time.as_secs_f32();
+    fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
+        let dt = update_descriptor.delta_time.as_secs_f32();
 
         // 90 degrees per second
         let speed = 10.0;

@@ -2375,6 +2375,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "orrery-rust"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cgmath",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "env_logger",
+ "futures",
+ "gfx-hal",
+ "image",
+ "log",
+ "pollster",
+ "rand 0.10.0",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "owned_ttf_parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2881,27 +2902,6 @@ name = "rgb"
 version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47b34b781b31e5d73e9fbc8689c70551fd1ade9a19e3e28cfec8580a79290cc4"
-
-[[package]]
-name = "rust-renderer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytemuck",
- "cgmath",
- "egui",
- "egui-wgpu",
- "egui-winit",
- "env_logger",
- "futures",
- "gfx-hal",
- "image",
- "log",
- "pollster",
- "rand 0.10.0",
- "wgpu",
- "winit",
-]
 
 [[package]]
 name = "rustc-hash"

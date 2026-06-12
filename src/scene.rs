@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use wgpu::{Device, Queue};
 use winit::dpi::LogicalSize;
 
@@ -10,7 +8,7 @@ use crate::{
         pretty_sphere::PrettySphere, wavy_surface::WavySurface,
     },
     helpers::{
-        entity::Entity,
+        entity::{Entity, UpdateDescriptor},
         math::create_projection,
         object::{GlobalFragmentUniform, GlobalVertexUniform, Object},
     },
@@ -61,17 +59,12 @@ impl Scene {
         }
     }
 
-    pub fn update(
-        &mut self,
-        queue: &Queue,
-        view_mat: [[f32; 4]; 4],
-        total_time: Duration,
-        delta_time: Duration,
-    ) {
-        self.global_vertex_uniform.view_mat = view_mat;
+    pub fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) {
+        self.global_vertex_uniform.view_mat = update_descriptor.view_mat.into();
+        self.global_vertex_uniform.projection_mat = update_descriptor.projection_mat.into();
 
         for entity in self.entities.iter_mut() {
-            if let Err(error) = entity.update(queue, total_time, delta_time) {
+            if let Err(error) = entity.update(queue, update_descriptor) {
                 println!("{:?}", error)
             }
         }

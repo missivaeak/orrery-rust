@@ -1,11 +1,11 @@
-use cgmath::{InnerSpace, Matrix4, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
+use cgmath::{InnerSpace, Matrix4, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 use winit::{
-    dpi::PhysicalPosition,
+    dpi::{LogicalSize, PhysicalPosition},
     event::{ElementState, KeyEvent, MouseButton},
     keyboard::{Key, NamedKey},
 };
 
-use crate::helpers::math::create_view;
+use crate::helpers::math::{create_projection, create_view};
 pub enum InputEventResult {
     Ok,
     RequestClose,
@@ -15,7 +15,7 @@ pub enum InputEventResult {
 }
 
 pub struct Controls {
-    pub camera_position: Point3<f32>,
+    pub camera_position: Vector3<f32>,
     pub camera_direction: Vector3<f32>,
     velocity: Vector3<f32>,
     acceleration: Vector3<f32>,
@@ -57,6 +57,10 @@ impl Controls {
 
     pub fn get_view_mat(&self) -> Matrix4<f32> {
         create_view(self.camera_position, self.camera_direction)
+    }
+
+    pub fn get_projection_mat(&self, size: &LogicalSize<f32>) -> Matrix4<f32> {
+        create_projection(size.width / size.height, true)
     }
 
     fn get_movement_acceleration(&self) -> Vector3<f32> {

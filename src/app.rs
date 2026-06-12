@@ -15,7 +15,7 @@ use winit::{
 use crate::{
     controls::{Controls, InputEventResult},
     gui::Gui,
-    helpers::constants::ASPECT_RATIO,
+    helpers::{constants::ASPECT_RATIO, entity::UpdateDescriptor},
     renderer::Renderer,
     scene::Scene,
 };
@@ -61,6 +61,7 @@ pub struct App {
     frame_count: FrameCount<600>,
     initial_instant: Option<Instant>,
     last_instant: Option<Instant>,
+    size: Option<LogicalSize<f32>>,
 }
 
 impl ApplicationHandler for App {
@@ -72,7 +73,7 @@ impl ApplicationHandler for App {
             event_loop
                 .create_window(
                     Window::default_attributes()
-                        .with_title("rust-renderer")
+                        .with_title("Orrery")
                         .with_inner_size(size),
                 )
                 .expect("Failed to create window"),
@@ -106,6 +107,7 @@ impl ApplicationHandler for App {
         self.gui = Some(gui);
         self.initial_instant = Some(Instant::now());
         self.last_instant = Some(Instant::now());
+        self.size = Some(size);
 
         println!("Initialisation completed")
     }
@@ -178,13 +180,18 @@ impl ApplicationHandler for App {
                     && let Some(controls) = &mut self.controls
                     && let Some(gui) = &mut self.gui
                     && let Some(window) = &self.window
+                    && let Some(size) = &self.size
                 {
                     controls.update();
                     scene.update(
                         &renderer.queue,
-                        controls.get_view_mat().into(),
-                        total_time,
-                        delta_time,
+                        &UpdateDescriptor {
+                            view_mat: controls.get_view_mat().into(),
+                            projection_mat: controls.get_projection_mat(size).into(),
+                            camera_position: controls.camera_position,
+                            total_time,
+                            delta_time,
+                        },
                     );
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
                     let objects_iter = scene.get_objects_iter();

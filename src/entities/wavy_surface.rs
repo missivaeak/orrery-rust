@@ -4,14 +4,12 @@ use cgmath::{ElementWise, InnerSpace, Matrix4, Quaternion, Vector2, Vector3};
 use egui::emath::inverse_lerp;
 
 use crate::helpers::{
-    entity::Entity,
+    entity::{Entity, UpdateDescriptor},
     math::{Aabb2, Aabb3, it_mat4},
     mesh::MeshData,
     object::{Object, ObjectOptions, ObjectVertexUniform},
     vertex::Vertex,
 };
-
-use std::time::Duration;
 
 use wgpu::{Device, Queue};
 
@@ -39,12 +37,7 @@ impl WavySurface {
 }
 
 impl Entity for WavySurface {
-    fn update(
-        &mut self,
-        queue: &Queue,
-        _time_elapsed: Duration,
-        _delta_time: Duration,
-    ) -> Result<(), ()> {
+    fn update(&mut self, queue: &Queue, _update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
         let model_mat = Matrix4::from_translation(self.translation)
             * Matrix4::from(self.rotation)
             * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);

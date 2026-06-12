@@ -1,4 +1,4 @@
-use cgmath::{Point3, num_traits::ToPrimitive};
+use cgmath::{Vector3, num_traits::ToPrimitive};
 use egui::{
     Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Shadow,
     ViewportId,
@@ -17,7 +17,7 @@ pub struct Gui {
     frame_started: bool,
     pub screen_descriptor: ScreenDescriptor,
     average_frame_ms: Option<f32>,
-    camera_position: Option<Point3<f32>>,
+    camera_position: Option<Vector3<f32>>,
     rects: Vec<Rect>,
     pub wireframe_enabled: bool,
 }
@@ -62,7 +62,7 @@ impl Gui {
         self.average_frame_ms = Some(frame_ms);
     }
 
-    pub fn set_camera_position(&mut self, camera_position: Point3<f32>) {
+    pub fn set_camera_position(&mut self, camera_position: Vector3<f32>) {
         self.camera_position = Some(camera_position);
     }
 
