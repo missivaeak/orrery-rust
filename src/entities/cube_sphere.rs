@@ -1,12 +1,81 @@
-use std::ops::{Add, Div, Mul};
+use cgmath::{ElementWise, Matrix4, Quaternion, Vector2, Vector3, num_traits::ToPrimitive};
 
-use cgmath::{ElementWise, Vector2, Vector3, num_traits::ToPrimitive};
 use wgpu::{
-    BufferUsages, Device,
+    BufferUsages, Device, Queue,
     util::{BufferInitDescriptor, DeviceExt},
 };
 
-use crate::helpers::rendering::{Mesh, Vertex};
+use crate::helpers::{
+    entity::Entity,
+    math::it_mat4,
+    mesh::Mesh,
+    object::{Object, ObjectOptions, ObjectVertexUniform},
+    vertex::Vertex,
+};
+
+use std::{
+    ops::{Add, Div, Mul},
+    time::Duration,
+};
+
+pub struct CubeSphere {
+    object: Object,
+    translation: Vector3<f32>,
+    scale: Vector3<f32>,
+    rotation: Quaternion<f32>,
+}
+
+impl CubeSphere {
+    pub fn new(device: &Device) -> Self {
+        let translation = Vector3::new(7.0, 0.0, 0.0);
+        let scale = Vector3::new(1.0, 1.0, 1.0);
+        let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+
+        let object = Object::from_meshes(
+            device,
+            create_cubesphere_meshes(device, 3),
+            ObjectOptions {
+                model_mat: Matrix4::from_translation(Vector3::new(-7.0, -7.0, -3.0)),
+                ..Default::default()
+            },
+        );
+
+        Self {
+            object,
+            translation,
+            scale,
+            rotation,
+        }
+    }
+}
+
+impl Entity for CubeSphere {
+    fn update(
+        &mut self,
+        queue: &Queue,
+        _time_elapsed: Duration,
+        _delta_time: Duration,
+    ) -> Result<(), ()> {
+        let model_mat = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
+            * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);
+
+        queue.write_buffer(
+            &self.object.vertex_uniform_buffer,
+            0,
+            bytemuck::bytes_of(&ObjectVertexUniform {
+                model_mat: model_mat.into(),
+                normal_mat: it_mat4(model_mat).into(),
+            }),
+        );
+
+        Ok(())
+    }
+
+    fn get_object(&self) -> &Object {
+        &self.object
+    }
+}
 
 pub fn create_cubesphere_meshes(device: &Device, resolution: usize) -> Vec<Mesh> {
     vec![

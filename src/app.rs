@@ -1,4 +1,8 @@
-use std::{fs, sync::Arc, time::Instant};
+use std::{
+    fs,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use winit::{
     application::ApplicationHandler,
@@ -135,23 +139,33 @@ impl ApplicationHandler for App {
             }
 
             WindowEvent::RedrawRequested => {
-                if let Some(last_instant) = self.last_instant
-                    && let frame_count = &mut self.frame_count
+                let total_time = if let Some(initial_instant) = self.initial_instant {
+                    initial_instant.elapsed()
+                } else {
+                    Duration::new(0, 0)
+                };
+
+                let delta_time = if let Some(last_instant) = self.last_instant {
+                    Instant::now().duration_since(last_instant)
+                } else {
+                    Duration::new(0, 0)
+                };
+
+                self.last_instant = Some(Instant::now());
+
+                if let frame_count = &mut self.frame_count
                     && let Some(gui) = &mut self.gui
                 {
-                    let time_elapsed_frame =
-                        Instant::now().duration_since(last_instant).as_secs_f32();
                     frame_count.advance();
-                    frame_count.set_frame(time_elapsed_frame * 1000.0);
+                    frame_count.set_frame(delta_time.as_secs_f32() * 1000.0);
                     let average_frame_ms =
                         frame_count.frame_ms.iter().sum::<f32>() / frame_count.len() as f32;
+
                     if frame_count.ready {
                         gui.set_frame_ms(average_frame_ms);
                         frame_count.ready = false;
                     }
                 }
-
-                self.last_instant = Some(Instant::now());
 
                 if let Some(gui) = &mut self.gui
                     && let Some(controls) = &mut self.controls
@@ -164,23 +178,22 @@ impl ApplicationHandler for App {
                     && let Some(controls) = &mut self.controls
                     && let Some(gui) = &mut self.gui
                     && let Some(window) = &self.window
-                    && let Some(initial_instant) = self.initial_instant
                 {
-                    let time_elapsed_total = initial_instant.elapsed().as_secs_f32();
                     controls.update();
                     scene.update(
-                        &renderer.device,
+                        &renderer.queue,
                         controls.get_view_mat().into(),
-                        time_elapsed_total,
+                        total_time,
+                        delta_time,
                     );
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
-                    let objects = scene.get_objects();
+                    let objects_iter = scene.get_objects_iter();
                     let render_wireframe = gui.wireframe_enabled;
 
                     gui.begin_frame(window);
 
                     renderer.render(
-                        objects,
+                        objects_iter,
                         vertex_uniform,
                         fragment_uniform,
                         |device, queue, encoder, view| {

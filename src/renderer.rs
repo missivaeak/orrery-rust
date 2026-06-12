@@ -1,5 +1,6 @@
 use crate::helpers::constants::BACKGROUND_COLOUR;
-use crate::helpers::rendering::{GlobalFragmentUniform, GlobalVertexUniform, Object, Vertex};
+use crate::helpers::object::{GlobalFragmentUniform, GlobalVertexUniform, Object};
+use crate::helpers::vertex::Vertex;
 use std::{borrow::Cow, sync::Arc};
 
 use egui_wgpu::wgpu::Instance;
@@ -44,7 +45,7 @@ struct RenderGroup {
 pub struct Renderer {
     surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     render_group_map: HashMap<RenderGroupType, RenderGroup>,
@@ -128,9 +129,9 @@ impl Renderer {
         self.config.format
     }
 
-    pub fn render<F>(
+    pub fn render<'a, F>(
         &mut self,
-        objects: &Vec<Object>,
+        objects_iter: impl Iterator<Item = &'a Object>,
         global_vertex_uniform: &GlobalVertexUniform,
         global_fragment_uniform: &GlobalFragmentUniform,
         mut egui_render: F,
@@ -139,8 +140,9 @@ impl Renderer {
         F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView),
     {
         let mut object_map: HashMap<RenderGroupType, Vec<&Object>> = HashMap::new();
+        let objects: Vec<&Object> = objects_iter.collect();
 
-        for object in objects {
+        for object in &objects {
             object_map
                 .entry(object.render_group_type)
                 .or_default()
@@ -313,7 +315,7 @@ impl Renderer {
                     bytemuck::bytes_of(global_fragment_uniform),
                 );
 
-                for object in objects.iter() {
+                for object in objects {
                     let uniform_bind_group = self.device.create_bind_group(&BindGroupDescriptor {
                         layout: &self.wireframe_render_group.uniform_bind_group_layout,
                         entries: &[

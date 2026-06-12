@@ -2,10 +2,7 @@ use std::ops::Div;
 
 use cgmath::{Deg, ElementWise, Vector2, Vector3};
 
-use crate::helpers::{
-    math::spherical_to_cartesian,
-    rendering::{MeshData, Vertex},
-};
+use crate::helpers::{math::spherical_to_cartesian, mesh::MeshData, vertex::Vertex};
 
 pub fn sphere_data(radius: f32, u: usize, v: usize) -> MeshData {
     let mut positions: Vec<Vector3<f32>> = Vec::with_capacity(4 * (u - 1) * (v - 1));

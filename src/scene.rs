@@ -1,32 +1,32 @@
-use wgpu::{
-    BufferUsages, Device,
-    util::{BufferInitDescriptor, DeviceExt},
-};
+use std::time::Duration;
+
+use wgpu::{Device, Queue};
 use winit::dpi::LogicalSize;
 
 use crate::{
     controls::Controls,
-    helpers::{
-        math::{self, create_model, it_mat4},
-        rendering::{GlobalFragmentUniform, GlobalVertexUniform, Object, ObjectVertexUniform},
+    entities::{
+        cube_sphere::CubeSphere, planet::Planet, pretty_cube::PrettyCube,
+        pretty_sphere::PrettySphere, wavy_surface::WavySurface,
     },
-    primitives::{
-        cube::get_cube_mesh_data, cubesphere::create_cubesphere_meshes,
-        octasphere::create_octasphere_mesh_data, sphere::sphere_data, surface::surface_data,
+    helpers::{
+        entity::Entity,
+        math::create_projection,
+        object::{GlobalFragmentUniform, GlobalVertexUniform, Object},
     },
 };
 
 pub struct Scene {
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
-    objects: Vec<Object>,
+    entities: Vec<Box<dyn Entity>>,
 }
 
 impl Scene {
     pub fn new(device: &Device, controls: &Controls, size: LogicalSize<f32>) -> Self {
         let view_mat = controls.get_view_mat();
-        let projection_mat = math::create_projection(size.width / size.height, true);
-        let mut objects = Vec::new();
+        let projection_mat = create_projection(size.width / size.height, true);
+        let mut entities: Vec<Box<dyn Entity>> = Vec::new();
         let global_vertex_uniform = GlobalVertexUniform {
             projection_mat: projection_mat.into(),
             view_mat: view_mat.into(),
@@ -48,62 +48,34 @@ impl Scene {
             specular_gloss: 30.0,
         };
 
-        objects.push(Object::from_mesh_datas(
-            device,
-            vec![get_cube_mesh_data()],
-            None,
-            None,
-        ));
-        objects.push(Object::from_mesh_datas(
-            device,
-            vec![sphere_data(1.1, 70, 70)],
-            None,
-            None,
-        ));
-        objects.push(Object::from_mesh_datas(
-            device,
-            vec![surface_data()],
-            None,
-            None,
-        ));
-        objects.push(Object::from_meshes(
-            device,
-            create_cubesphere_meshes(device, 2),
-            None,
-            None,
-        ));
-        objects.push(Object::from_mesh_datas(
-            device,
-            create_octasphere_mesh_data(5.0, 5),
-            None,
-            None,
-        ));
+        entities.push(Box::new(PrettyCube::new(device)));
+        entities.push(Box::new(CubeSphere::new(device)));
+        entities.push(Box::new(Planet::new(device)));
+        entities.push(Box::new(WavySurface::new(device)));
+        entities.push(Box::new(PrettySphere::new(device)));
 
         Self {
             global_vertex_uniform,
             global_fragment_uniform,
-            objects,
+            entities,
         }
     }
 
-    pub fn update(&mut self, device: &Device, view_mat: [[f32; 4]; 4], time_elapsed: f32) {
+    pub fn update(
+        &mut self,
+        queue: &Queue,
+        view_mat: [[f32; 4]; 4],
+        total_time: Duration,
+        delta_time: Duration,
+    ) {
         self.global_vertex_uniform.view_mat = view_mat;
 
-        let rotating_mat = create_model(
-            (-0.8, -6.0, 2.4).into(),
-            // (2.4, -0.5, 0.0).into(),
-            (time_elapsed.sin(), time_elapsed.cos(), time_elapsed.cos()).into(),
-            (1.0, 1.0, 1.0).into(),
-        );
+        for entity in self.entities.iter_mut() {
+            if let Err(error) = entity.update(queue, total_time, delta_time) {
+                println!("{:?}", error)
+            }
+        }
 
-        self.objects[0].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Object Vertex Uniform Buffer"),
-            contents: bytemuck::bytes_of(&ObjectVertexUniform {
-                model_mat: rotating_mat.into(),
-                normal_mat: it_mat4(rotating_mat).into(),
-            }),
-            usage: BufferUsages::UNIFORM,
-        });
         // self.objects[1].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
         //     label: Some("Object Vertex Uniform Buffer sphere"),
         //     contents: bytemuck::bytes_of(&ObjectVertexUniform {
@@ -119,8 +91,8 @@ impl Scene {
         // }
     }
 
-    pub fn get_objects(&self) -> &Vec<Object> {
-        &self.objects
+    pub fn get_objects_iter(&self) -> impl Iterator<Item = &Object> {
+        self.entities.iter().map(|entity| entity.get_object())
     }
 
     pub fn get_global_uniforms(&self) -> (&GlobalVertexUniform, &GlobalFragmentUniform) {

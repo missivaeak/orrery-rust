@@ -2,7 +2,7 @@ use std::ops::Div;
 
 use cgmath::{ElementWise, Vector2, Vector3};
 
-use crate::helpers::rendering::{MeshData, Vertex};
+use crate::helpers::{mesh::MeshData, vertex::Vertex};
 
 pub fn get_cube_mesh_data() -> MeshData {
     let positions = cube_positions();

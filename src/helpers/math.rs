@@ -23,7 +23,7 @@ pub fn create_view(camera_position: Point3<f32>, camera_direction: Vector3<f32>)
 
 pub fn create_projection(aspect: f32, is_perspective: bool) -> Matrix4<f32> {
     match is_perspective {
-        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 100.0),
+        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 1000.0),
         false => NORMALISATION_MATRIX * ortho(-4.0, 4.0, -3.0, 3.0, -1.0, 6.0),
     }
 }
@@ -49,6 +49,7 @@ pub fn it_mat4(mat4: Matrix4<f32>) -> Matrix4<f32> {
         .transpose()
 }
 
+#[allow(unused, dead_code)]
 pub fn spherical_to_cartesian(radius: f32, theta: Deg<f32>, phi: Deg<f32>) -> Vector3<f32> {
     let x = radius * theta.sin() * phi.cos();
     let y = radius * theta.cos();
@@ -57,6 +58,7 @@ pub fn spherical_to_cartesian(radius: f32, theta: Deg<f32>, phi: Deg<f32>) -> Ve
     Vector3::new(x, y, z)
 }
 
+#[allow(unused, dead_code)]
 pub struct Aabb3 {
     pub x_min: f32,
     pub x_max: f32,
@@ -66,6 +68,7 @@ pub struct Aabb3 {
     pub z_max: f32,
 }
 
+#[allow(unused, dead_code)]
 pub struct Aabb2 {
     pub x_min: f32,
     pub x_max: f32,

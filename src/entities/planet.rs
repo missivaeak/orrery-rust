@@ -1,5 +1,83 @@
-use crate::helpers::rendering::{MeshData, Vertex};
-use cgmath::{InnerSpace, Vector3};
+use std::time::Duration;
+
+use cgmath::{Deg, InnerSpace, Matrix4, Quaternion, Rotation3, Vector3};
+
+use wgpu::{Device, Queue};
+
+use crate::helpers::{
+    entity::Entity,
+    math::it_mat4,
+    mesh::MeshData,
+    object::{Object, ObjectOptions, ObjectVertexUniform},
+    vertex::Vertex,
+};
+
+pub struct Planet {
+    object: Object,
+    translation: Vector3<f32>,
+    scale: Vector3<f32>,
+    rotation: Quaternion<f32>,
+}
+
+impl Planet {
+    pub fn new(device: &Device) -> Self {
+        let translation = Vector3::new(-7.0, -7.0, -3.0);
+        let scale = Vector3::new(1.0, 1.0, 1.0);
+        let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+
+        let object = Object::from_mesh_datas(
+            device,
+            create_octasphere_mesh_data(5.0, 3),
+            ObjectOptions {
+                model_mat: Matrix4::from_translation(translation),
+                ..Default::default()
+            },
+        );
+        Self {
+            object,
+            translation,
+            scale,
+            rotation,
+        }
+    }
+}
+
+impl Entity for Planet {
+    fn update(
+        &mut self,
+        queue: &Queue,
+        _total_time: Duration,
+        delta_time: Duration,
+    ) -> Result<(), ()> {
+        let dt = delta_time.as_secs_f32();
+
+        // 90 degrees per second
+        let speed = 10.0;
+
+        let delta_rotation = Quaternion::from_angle_y(Deg(speed * dt));
+
+        self.rotation = delta_rotation * self.rotation;
+
+        let model_mat = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
+            * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);
+
+        queue.write_buffer(
+            &self.object.vertex_uniform_buffer,
+            0,
+            bytemuck::bytes_of(&ObjectVertexUniform {
+                model_mat: model_mat.into(),
+                normal_mat: it_mat4(model_mat).into(),
+            }),
+        );
+
+        Ok(())
+    }
+
+    fn get_object(&self) -> &Object {
+        &self.object
+    }
+}
 
 struct Face {
     vectors: Vec<Vector3<f32>>,

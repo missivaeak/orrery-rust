@@ -1,5 +1,6 @@
 mod app;
 mod controls;
+mod entities;
 mod gui;
 mod helpers;
 mod primitives;
