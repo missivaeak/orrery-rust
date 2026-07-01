@@ -111,8 +111,8 @@ impl Gui {
 
                         egui::Grid::new("stats_grid").num_columns(2).show(ui, |ui| {
                             ui.label("");
-                            ui.label("X/F");
-                            ui.label("Y/R");
+                            ui.label("X/R");
+                            ui.label("Y/F");
                             ui.label("Z/U");
                             ui.end_row();
 

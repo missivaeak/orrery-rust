@@ -1,5 +1,5 @@
-pub mod cube_sphere;
-pub mod planet;
+pub mod cube_planet;
+pub mod oct_planet;
 pub mod pretty_cube;
 pub mod pretty_sphere;
 pub mod primitive;

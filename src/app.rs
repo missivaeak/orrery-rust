@@ -180,14 +180,13 @@ impl ApplicationHandler for App {
                     && let Some(controls) = &mut self.controls
                     && let Some(gui) = &mut self.gui
                     && let Some(window) = &self.window
-                    && let Some(size) = &self.size
                 {
                     controls.update();
                     scene.update(
                         &renderer.queue,
                         &UpdateDescriptor {
-                            view_mat: controls.get_view_mat().into(),
-                            projection_mat: controls.get_projection_mat(size).into(),
+                            view_mat: controls.get_view_mat(),
+                            projection_mat: None,
                             camera_position: controls.camera_position,
                             total_time,
                             delta_time,

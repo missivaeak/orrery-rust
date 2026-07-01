@@ -10,14 +10,14 @@ use crate::helpers::{
     vertex::Vertex,
 };
 
-pub struct Planet {
+pub struct OctPlanet {
     object: Object,
     translation: Vector3<f32>,
     scale: Vector3<f32>,
     rotation: Quaternion<f32>,
 }
 
-impl Planet {
+impl OctPlanet {
     pub fn new(device: &Device) -> Self {
         let translation = Vector3::new(-7.0, -7.0, -3.0);
         let scale = Vector3::new(1.0, 1.0, 1.0);
@@ -40,7 +40,7 @@ impl Planet {
     }
 }
 
-impl Entity for Planet {
+impl Entity for OctPlanet {
     fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
         let dt = update_descriptor.delta_time.as_secs_f32();
 

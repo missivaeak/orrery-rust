@@ -11,7 +11,7 @@ pub struct UpdateDescriptor {
     pub total_time: Duration,
     pub camera_position: Vector3<f32>,
     pub view_mat: Matrix4<f32>,
-    pub projection_mat: Matrix4<f32>,
+    pub projection_mat: Option<Matrix4<f32>>,
 }
 
 pub trait Entity {

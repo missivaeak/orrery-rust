@@ -1,12 +1,10 @@
+use cgmath::Matrix4;
 use wgpu::{Device, Queue};
 use winit::dpi::LogicalSize;
 
 use crate::{
     controls::Controls,
-    entities::{
-        cube_sphere::CubeSphere, planet::Planet, pretty_cube::PrettyCube,
-        pretty_sphere::PrettySphere, wavy_surface::WavySurface,
-    },
+    entities::cube_planet::CubePlanet,
     helpers::{
         entity::{Entity, UpdateDescriptor},
         math::create_projection,
@@ -18,6 +16,7 @@ pub struct Scene {
     global_vertex_uniform: GlobalVertexUniform,
     global_fragment_uniform: GlobalFragmentUniform,
     entities: Vec<Box<dyn Entity>>,
+    projection_mat: Matrix4<f32>,
 }
 
 impl Scene {
@@ -46,42 +45,39 @@ impl Scene {
             specular_gloss: 30.0,
         };
 
-        entities.push(Box::new(PrettyCube::new(device)));
-        entities.push(Box::new(CubeSphere::new(device)));
-        entities.push(Box::new(Planet::new(device)));
-        entities.push(Box::new(WavySurface::new(device)));
-        entities.push(Box::new(PrettySphere::new(device)));
+        entities.push(Box::new(CubePlanet::new(device)));
 
         Self {
             global_vertex_uniform,
             global_fragment_uniform,
             entities,
+            projection_mat,
         }
     }
 
-    pub fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) {
-        self.global_vertex_uniform.view_mat = update_descriptor.view_mat.into();
-        self.global_vertex_uniform.projection_mat = update_descriptor.projection_mat.into();
+    pub fn update(&mut self, queue: &Queue, update_descriptor_partial: &UpdateDescriptor) {
+        self.global_vertex_uniform.view_mat = update_descriptor_partial.view_mat.into();
+        self.global_vertex_uniform.projection_mat = self.projection_mat.into();
+
+        let update_descriptor =
+            if let Some(projection_mat) = update_descriptor_partial.projection_mat {
+                self.projection_mat = projection_mat;
+                update_descriptor_partial
+            } else {
+                &UpdateDescriptor {
+                    delta_time: update_descriptor_partial.delta_time,
+                    total_time: update_descriptor_partial.total_time,
+                    camera_position: update_descriptor_partial.camera_position,
+                    view_mat: update_descriptor_partial.view_mat,
+                    projection_mat: Some(self.projection_mat),
+                }
+            };
 
         for entity in self.entities.iter_mut() {
             if let Err(error) = entity.update(queue, update_descriptor) {
                 println!("{:?}", error)
             }
         }
-
-        // self.objects[1].vertex_uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        //     label: Some("Object Vertex Uniform Buffer sphere"),
-        //     contents: bytemuck::bytes_of(&ObjectVertexUniform {
-        //         model_mat: sphere_mat.into(),
-        //         normal_mat: it_mat4(sphere_mat).into(),
-        //     }),
-        //     usage: BufferUsages::UNIFORM,
-        // });
-
-        // for object in self.objects.iter_mut() {
-        //     object.renderable.vertex_uniform.model_mat = model_mat.into();
-        //     object.renderable.vertex_uniform.normal_mat = it_mat4(model_mat).into();
-        // }
     }
 
     pub fn get_objects_iter(&self) -> impl Iterator<Item = &Object> {
