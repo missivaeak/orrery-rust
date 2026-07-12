@@ -77,3 +77,17 @@ pub struct Aabb2 {
     pub y_min: f32,
     pub y_max: f32,
 }
+
+fn ilerp_element(input: f32, min: f32, max: f32) -> f32 {
+    let diff = max - min;
+    let t = (input - min) * max;
+    t / diff
+}
+
+pub fn ilerp(input: Vector3<f32>, min: f32, max: f32) -> Vector3<f32> {
+    Vector3 {
+        x: ilerp_element(input.x, min, max),
+        y: ilerp_element(input.y, min, max),
+        z: ilerp_element(input.z, min, max),
+    }
+}

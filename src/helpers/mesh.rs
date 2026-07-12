@@ -21,12 +21,12 @@ pub fn get_mesh(mesh_data: &MeshData, device: &Device) -> Mesh {
     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Vertex Buffer"),
         contents: bytemuck::cast_slice(vertices),
-        usage: BufferUsages::VERTEX,
+        usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
     });
     let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Vertex Buffer"),
         contents: bytemuck::cast_slice(indices),
-        usage: BufferUsages::INDEX,
+        usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
     });
 
     Mesh {
