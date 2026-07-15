@@ -4,7 +4,7 @@ use winit::dpi::LogicalSize;
 
 use crate::{
     controls::Controls,
-    entities::cube_planet::CubePlanet,
+    entities::{cube_planet::CubePlanet, pretty_sphere::PrettySphere},
     helpers::{
         entity::{Entity, UpdateDescriptor},
         math::create_projection,
@@ -46,6 +46,7 @@ impl Scene {
         };
 
         entities.push(Box::new(CubePlanet::new(device)));
+        entities.push(Box::new(PrettySphere::new(device)));
 
         Self {
             global_vertex_uniform,

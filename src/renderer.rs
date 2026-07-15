@@ -137,10 +137,11 @@ impl Renderer {
         mut egui_render: F,
         render_wireframes: bool,
     ) where
-        F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView),
+        F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView, u32),
     {
         let mut object_map: HashMap<RenderGroupType, Vec<&Object>> = HashMap::new();
         let objects: Vec<&Object> = objects_iter.collect();
+        let mut tri_count = 0;
 
         for object in &objects {
             object_map
@@ -272,6 +273,8 @@ impl Renderer {
                                 );
                                 rpass.set_bind_group(0, &uniform_bind_group, &[]);
                                 rpass.draw_indexed(0..mesh.index_length, 0, 0..1);
+
+                                tri_count += mesh.index_length / 3;
                             }
                         }
                     }
@@ -358,7 +361,7 @@ impl Renderer {
                 }
             }
 
-            egui_render(&self.device, &self.queue, &mut encoder, &view);
+            egui_render(&self.device, &self.queue, &mut encoder, &view, tri_count);
 
             self.queue.submit(Some(encoder.finish()));
 

@@ -202,7 +202,8 @@ impl ApplicationHandler for App {
                         objects_iter,
                         vertex_uniform,
                         fragment_uniform,
-                        |device, queue, encoder, view| {
+                        |device, queue, encoder, view, tri_count| {
+                            gui.set_tri_count(tri_count);
                             gui.end_frame_and_draw(device, queue, encoder, window, view)
                         },
                         render_wireframe,

@@ -20,6 +20,7 @@ pub struct Gui {
     camera_position: Option<Vector3<f32>>,
     rects: Vec<Rect>,
     pub wireframe_enabled: bool,
+    tri_count: u32,
 }
 
 impl Gui {
@@ -51,6 +52,7 @@ impl Gui {
             camera_position: None,
             rects: Vec::with_capacity(10),
             wireframe_enabled: true,
+            tri_count: 0,
         }
     }
 
@@ -77,6 +79,10 @@ impl Gui {
             }
         }
         false
+    }
+
+    pub fn set_tri_count(&mut self, tri_count: u32) {
+        self.tri_count = tri_count;
     }
 
     pub fn begin_frame(&mut self, window: &Window) {
@@ -146,6 +152,12 @@ impl Gui {
                                 ui.label("FPS:");
                             });
                             ui.label(fps);
+                            ui.end_row();
+
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("Tri:");
+                            });
+                            ui.label(format!("{:}", &self.tri_count));
                             ui.end_row();
 
                             // ui.horizontal(|ui| {

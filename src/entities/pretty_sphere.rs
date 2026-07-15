@@ -19,12 +19,12 @@ pub struct PrettySphere {
 
 impl PrettySphere {
     pub fn new(device: &Device) -> Self {
-        let translation = Vector3::new(-13.0, -40.0, -10.0);
+        let translation = Vector3::new(0.0, 1.3, 0.0);
         let scale = Vector3::new(1.0, 1.0, 1.0);
         let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
         let object = Object::from_mesh_datas(
             device,
-            vec![sphere_data(2.0, 20, 10)],
+            vec![sphere_data(0.1, 20, 10)],
             ObjectOptions::default(),
         );
         Self {
