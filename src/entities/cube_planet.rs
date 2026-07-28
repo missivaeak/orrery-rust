@@ -52,7 +52,7 @@ impl CubePlanet {
                 let MeshData {
                     vertices: _vertices,
                     indices,
-                } = face.get_mesh_data(Vector3::unit_y());
+                } = face.get_mesh_data(Vector3::unit_y(), -Vector3::unit_y());
                 let vertex_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
                     size: 14272000,
@@ -127,7 +127,11 @@ impl Face {
             min_depth: 2,
         }
     }
-    fn get_mesh_data(&self, camera_position: Vector3<f32>) -> MeshData {
+    fn get_mesh_data(
+        &self,
+        camera_position: Vector3<f32>,
+        camera_direction: Vector3<f32>,
+    ) -> MeshData {
         let binormal = self.normal.cross(self.tangent);
         // let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
         let mut mesh_data = MeshData {
@@ -149,76 +153,19 @@ impl Face {
             ],
             0,
             camera_position,
+            camera_direction,
             &mut mesh_data,
         );
 
         mesh_data
     }
 
-    // fn get_mesh_data_legacy(&self, camera_position: Vector3<f32>) -> MeshData {
-    //     let binormal = self.normal.cross(self.tangent);
-    //     let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
-    //     let mut mesh_data = MeshData {
-    //         vertices: Vec::with_capacity(4),
-    //         indices: Vec::with_capacity(6),
-    //     };
-    //
-    //     self.descend_node_legacy(
-    //         [
-    //             Vertex::new(
-    //                 self.normal - self.tangent - binormal,
-    //                 self.normal,
-    //                 Vector2::new(-self.radius, -self.radius),
-    //                 colour,
-    //             ),
-    //             Vertex::new(
-    //                 self.normal + self.tangent - binormal,
-    //                 self.normal,
-    //                 Vector2::new(self.radius, -self.radius),
-    //                 colour,
-    //             ),
-    //             Vertex::new(
-    //                 self.normal + self.tangent + binormal,
-    //                 self.normal,
-    //                 Vector2::new(self.radius, self.radius),
-    //                 colour,
-    //             ),
-    //             Vertex::new(
-    //                 self.normal - self.tangent + binormal,
-    //                 self.normal,
-    //                 Vector2::new(-self.radius, self.radius),
-    //                 colour,
-    //             ),
-    //         ],
-    //         0,
-    //         camera_position,
-    //         &mut mesh_data,
-    //     );
-    //
-    //     for vertex in mesh_data.vertices.iter_mut() {
-    //         let position = Vector3::new(vertex.position[0], vertex.position[1], vertex.position[2])
-    //             .normalize();
-    //
-    //         vertex.position[0] = position.x;
-    //         vertex.position[1] = position.y;
-    //         vertex.position[2] = position.z;
-    //
-    //         let normal = Vector3::new(vertex.position[0], vertex.position[1], vertex.position[2])
-    //             .normalize();
-    //
-    //         vertex.normal[0] = normal.x;
-    //         vertex.normal[1] = normal.y;
-    //         vertex.normal[2] = normal.z;
-    //     }
-    //
-    //     mesh_data
-    // }
-
     fn descend_node(
         &self,
         positions: [Vector3<f32>; 4],
         depth: u32,
         camera_position: Vector3<f32>,
+        camera_direction: Vector3<f32>,
         mesh_data: &mut MeshData,
     ) {
         let top_left = positions[0].normalize();
@@ -232,6 +179,13 @@ impl Face {
         let screen_space_factor = area / distance;
         let threshold: f32 = 0.005;
 
+        if [top_left, top_right, bottom_right, bottom_left]
+            .iter()
+            .all(|corner| corner.dot(camera_direction) > 0.0)
+        {
+            return;
+        }
+
         if depth < self.min_depth || (depth < self.max_depth && screen_space_factor > threshold) {
             let top = positions[0].lerp(positions[1], 0.5).normalize();
             let right = positions[1].lerp(positions[2], 0.5).normalize();
@@ -241,24 +195,28 @@ impl Face {
                 [top_left, top, middle, left],
                 depth + 1,
                 camera_position,
+                camera_direction,
                 mesh_data,
             );
             self.descend_node(
                 [top, top_right, right, middle],
                 depth + 1,
                 camera_position,
+                camera_direction,
                 mesh_data,
             );
             self.descend_node(
                 [middle, right, bottom_right, bottom],
                 depth + 1,
                 camera_position,
+                camera_direction,
                 mesh_data,
             );
             self.descend_node(
                 [left, middle, bottom, bottom_left],
                 depth + 1,
                 camera_position,
+                camera_direction,
                 mesh_data,
             );
 
@@ -287,83 +245,13 @@ impl Face {
             });
         }
 
-        mesh_data.indices.push(vertex_count + 0);
+        mesh_data.indices.push(vertex_count);
         mesh_data.indices.push(vertex_count + 1);
         mesh_data.indices.push(vertex_count + 2);
         mesh_data.indices.push(vertex_count + 2);
         mesh_data.indices.push(vertex_count + 3);
-        mesh_data.indices.push(vertex_count + 0);
+        mesh_data.indices.push(vertex_count);
     }
-
-    // fn descend_node_legacy(
-    //     &self,
-    //     vertices: [Vertex; 4],
-    //     depth: u32,
-    //     camera_position: Vector3<f32>,
-    //     mesh_data: &mut MeshData,
-    // ) {
-    //     let top_left = vertices[0];
-    //     let top_right = vertices[1];
-    //     let bottom_right = vertices[2];
-    //     let bottom_left = vertices[3];
-    //     let middle = top_left.lerp(bottom_right, 0.5);
-    //     let distance = (camera_position - middle.get_position()).magnitude();
-    //     if depth < self.min_depth || (depth < self.max_depth && distance < 0.8) {
-    //         let top = top_left.lerp(top_right, 0.5);
-    //         let right = bottom_right.lerp(top_right, 0.5);
-    //         let bottom = bottom_left.lerp(bottom_right, 0.5);
-    //         let left = top_left.lerp(bottom_left, 0.5);
-    //         self.descend_node_legacy(
-    //             [top_left, top, middle, left],
-    //             depth + 1,
-    //             camera_position,
-    //             mesh_data,
-    //         );
-    //         self.descend_node_legacy(
-    //             [top, top_right, right, middle],
-    //             depth + 1,
-    //             camera_position,
-    //             mesh_data,
-    //         );
-    //         self.descend_node_legacy(
-    //             [middle, right, bottom_right, bottom],
-    //             depth + 1,
-    //             camera_position,
-    //             mesh_data,
-    //         );
-    //         self.descend_node_legacy(
-    //             [left, middle, bottom, bottom_left],
-    //             depth + 1,
-    //             camera_position,
-    //             mesh_data,
-    //         );
-    //
-    //         return;
-    //     }
-    //
-    //     let vertex_count = mesh_data.vertices.len() as u16;
-    //
-    //     if mesh_data.vertices.capacity() - mesh_data.vertices.len() < 4 {
-    //         mesh_data
-    //             .vertices
-    //             .reserve(mesh_data.vertices.capacity() * 4);
-    //     }
-    //
-    //     if mesh_data.indices.capacity() - mesh_data.indices.len() < 6 {
-    //         mesh_data.indices.reserve(mesh_data.indices.capacity() * 4);
-    //     }
-    //
-    //     for vertex in vertices.iter() {
-    //         mesh_data.vertices.push(*vertex);
-    //     }
-    //
-    //     mesh_data.indices.push(vertex_count + 0);
-    //     mesh_data.indices.push(vertex_count + 1);
-    //     mesh_data.indices.push(vertex_count + 2);
-    //     mesh_data.indices.push(vertex_count + 2);
-    //     mesh_data.indices.push(vertex_count + 3);
-    //     mesh_data.indices.push(vertex_count + 0);
-    // }
 }
 
 impl Entity for CubePlanet {
@@ -386,53 +274,68 @@ impl Entity for CubePlanet {
         // pull out vector3 out of self.quad_tree_roots here
         // populate meshes with vertices and indices
 
-        let camera_position = if update_descriptor.gui.lod_probe_enabled {
-            Vector3 {
-                x: EARTH_RADIUS,
-                y: 0.0,
-                z: 0.0,
-            }
+        let (camera_position, camera_direction) = if update_descriptor.gui.lod_probe_enabled {
+            (
+                Vector3 {
+                    x: EARTH_RADIUS,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                -Vector3::unit_x(),
+            )
         } else {
-            update_descriptor.controls.camera_position
+            (
+                update_descriptor.controls.camera_position,
+                update_descriptor.controls.camera_direction,
+            )
         };
 
-        let camera_position_local = model_mat
-            .invert()
-            .expect("Failed to invert cube_planet model matrix")
-            .transform_vector(camera_position)
-            .normalize();
+        if let Some(model_mat_i) = model_mat.invert() {
+            let camera_position_local = model_mat
+                .invert()
+                .expect("Failed to invert cube_planet model matrix")
+                .transform_vector(camera_position)
+                .normalize();
 
-        for (i, mesh_data) in self
-            .faces
-            .iter()
-            // .map(|face| face.get_mesh_data(update_descriptor.camera_position))
-            .map(|face| face.get_mesh_data(camera_position_local))
-            .enumerate()
-        {
-            let MeshData { vertices, indices } = mesh_data;
+            for (i, mesh_data) in self
+                .faces
+                .iter()
+                // .map(|face| face.get_mesh_data(update_descriptor.camera_position))
+                .map(|face| {
+                    face.get_mesh_data(
+                        model_mat_i.transform_vector(camera_position),
+                        model_mat_i.transform_vector(camera_direction),
+                    )
+                })
+                .enumerate()
+            {
+                let MeshData { vertices, indices } = mesh_data;
+                queue.write_buffer(
+                    &self.object.meshes[i].vertex_buffer,
+                    0,
+                    bytemuck::cast_slice(&vertices),
+                );
+                queue.write_buffer(
+                    &self.object.meshes[i].index_buffer,
+                    0,
+                    bytemuck::cast_slice(&indices),
+                );
+                self.object.meshes[i].index_length = indices.len() as u32;
+            }
+
             queue.write_buffer(
-                &self.object.meshes[i].vertex_buffer,
+                &self.object.vertex_uniform_buffer,
                 0,
-                bytemuck::cast_slice(&vertices),
+                bytemuck::bytes_of(&ObjectVertexUniform {
+                    model_mat: model_mat.into(),
+                    normal_mat: it_mat4(model_mat).into(),
+                }),
             );
-            queue.write_buffer(
-                &self.object.meshes[i].index_buffer,
-                0,
-                bytemuck::cast_slice(&indices),
-            );
-            self.object.meshes[i].index_length = indices.len() as u32;
+
+            Ok(())
+        } else {
+            Err(())
         }
-
-        queue.write_buffer(
-            &self.object.vertex_uniform_buffer,
-            0,
-            bytemuck::bytes_of(&ObjectVertexUniform {
-                model_mat: model_mat.into(),
-                normal_mat: it_mat4(model_mat).into(),
-            }),
-        );
-
-        Ok(())
     }
 
     fn get_object(&self) -> &Object {

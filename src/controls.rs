@@ -64,6 +64,7 @@ impl Controls {
 
     pub fn get_update_descriptor(&self) -> ControlsUpdateDescriptor {
         let view_mat = create_view(self.camera_position, self.camera_direction);
+        println!("{:?}", self.camera_position);
         ControlsUpdateDescriptor {
             view_mat,
             camera_position: self.camera_position,

@@ -2,6 +2,8 @@ use std::f32::consts::TAU;
 
 use cgmath::{Angle, Deg, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective};
 
+use crate::helpers::constants::EARTH_RADIUS;
+
 // I want to use blender coordinates, right handed, Z up, Y forward, X right
 
 // change from z{0,1} to z{-1,1}
@@ -25,7 +27,9 @@ pub fn create_view(camera_position: Vector3<f32>, camera_direction: Vector3<f32>
 
 pub fn create_projection(aspect: f32, is_perspective: bool) -> Matrix4<f32> {
     match is_perspective {
-        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 10000.0),
+        true => {
+            NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, EARTH_RADIUS * 2.0)
+        }
         false => NORMALISATION_MATRIX * ortho(-4.0, 4.0, -3.0, 3.0, -1.0, 6.0),
     }
 }

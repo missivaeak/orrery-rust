@@ -20,7 +20,7 @@ pub struct PrettySphere {
 
 impl PrettySphere {
     pub fn new(device: &Device) -> Self {
-        let translation = Vector3::new(EARTH_RADIUS, 0.0, 0.0);
+        let translation = Vector3::new(EARTH_RADIUS + 1.0, 0.0, 0.0);
         let scale = Vector3::new(500.0, 500.0, 500.0);
         let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
         let object = Object::from_mesh_datas(

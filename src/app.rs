@@ -194,6 +194,7 @@ impl ApplicationHandler for App {
 
                     controls.update(&update_descriptor);
                     scene.update(&renderer.queue, &update_descriptor);
+
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
                     let objects_iter = scene.get_objects_iter();
 
