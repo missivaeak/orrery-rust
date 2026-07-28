@@ -25,7 +25,7 @@ pub fn create_view(camera_position: Vector3<f32>, camera_direction: Vector3<f32>
 
 pub fn create_projection(aspect: f32, is_perspective: bool) -> Matrix4<f32> {
     match is_perspective {
-        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 1000.0),
+        true => NORMALISATION_MATRIX * perspective(Rad(TAU / 10.0), aspect, 0.1, 10000.0),
         false => NORMALISATION_MATRIX * ortho(-4.0, 4.0, -3.0, 3.0, -1.0, 6.0),
     }
 }
@@ -84,6 +84,7 @@ fn ilerp_element(input: f32, min: f32, max: f32) -> f32 {
     t / diff
 }
 
+#[allow(unused)]
 pub fn ilerp(input: Vector3<f32>, min: f32, max: f32) -> Vector3<f32> {
     Vector3 {
         x: ilerp_element(input.x, min, max),

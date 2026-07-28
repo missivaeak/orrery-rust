@@ -1,11 +1,11 @@
 use cgmath::{InnerSpace, Matrix4, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 use winit::{
-    dpi::{LogicalSize, PhysicalPosition},
+    dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton},
     keyboard::{Key, NamedKey},
 };
 
-use crate::helpers::math::{create_projection, create_view};
+use crate::helpers::{constants::EARTH_RADIUS, entity::UpdateDescriptor, math::create_view};
 pub enum InputEventResult {
     Ok,
     RequestClose,
@@ -33,11 +33,18 @@ pub struct Controls {
     cursor_position: Option<PhysicalPosition<f64>>,
 }
 
+#[allow(unused, dead_code)]
+pub struct ControlsUpdateDescriptor {
+    pub view_mat: Matrix4<f32>,
+    pub camera_position: Vector3<f32>,
+    pub camera_direction: Vector3<f32>,
+}
+
 impl Controls {
     pub fn new() -> Self {
         Self {
-            camera_position: (3.0, 3.0, 1.5).into(),
-            camera_direction: Vector3::new(-3.0, -3.0, -1.5).normalize(),
+            camera_position: (EARTH_RADIUS * 1.5, EARTH_RADIUS * 1.5, 0.0).into(),
+            camera_direction: Vector3::new(-1.0, -1.0, 0.0).normalize(),
             velocity: (0.0, 0.0, 0.0).into(),
             acceleration: (0.0, 0.0, 0.0).into(),
             movement_acceleration: 1.0,
@@ -55,12 +62,13 @@ impl Controls {
         }
     }
 
-    pub fn get_view_mat(&self) -> Matrix4<f32> {
-        create_view(self.camera_position, self.camera_direction)
-    }
-
-    pub fn get_projection_mat(&self, size: &LogicalSize<f32>) -> Matrix4<f32> {
-        create_projection(size.width / size.height, true)
+    pub fn get_update_descriptor(&self) -> ControlsUpdateDescriptor {
+        let view_mat = create_view(self.camera_position, self.camera_direction);
+        ControlsUpdateDescriptor {
+            view_mat,
+            camera_position: self.camera_position,
+            camera_direction: self.camera_direction,
+        }
     }
 
     fn get_movement_acceleration(&self) -> Vector3<f32> {
@@ -98,7 +106,7 @@ impl Controls {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, _update_descriptor: &UpdateDescriptor) {
         let mut speed = self.velocity.magnitude();
         let breaking = self.breaking_fixed + (speed * self.breaking_factor);
 

@@ -1,17 +1,17 @@
-use std::time::Duration;
-
-use cgmath::{Matrix4, Vector3};
 use wgpu::Queue;
 
-use crate::helpers::object::Object;
+use crate::{
+    app::AppUpdateDescriptor, controls::ControlsUpdateDescriptor, gui::GuiUpdateDescriptor,
+    helpers::object::Object, renderer::RendererUpdateDescriptor, scene::SceneUpdateDescriptor,
+};
 
 #[allow(unused, dead_code)]
 pub struct UpdateDescriptor {
-    pub delta_time: Duration,
-    pub total_time: Duration,
-    pub camera_position: Vector3<f32>,
-    pub view_mat: Matrix4<f32>,
-    pub projection_mat: Option<Matrix4<f32>>,
+    pub app: AppUpdateDescriptor,
+    pub controls: ControlsUpdateDescriptor,
+    pub scene: SceneUpdateDescriptor,
+    pub renderer: Option<RendererUpdateDescriptor>,
+    pub gui: GuiUpdateDescriptor,
 }
 
 pub trait Entity {

@@ -1,4 +1,4 @@
-use cgmath::{Vector3, num_traits::ToPrimitive};
+use cgmath::num_traits::ToPrimitive;
 use egui::{
     Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Shadow,
     ViewportId,
@@ -11,16 +11,23 @@ use winit::{
     window::{Theme, Window},
 };
 
+use crate::helpers::entity::UpdateDescriptor;
+
 pub struct Gui {
     pub state: State,
     renderer: Renderer,
     frame_started: bool,
-    pub screen_descriptor: ScreenDescriptor,
+    screen_descriptor: ScreenDescriptor,
     average_frame_ms: Option<f32>,
-    camera_position: Option<Vector3<f32>>,
     rects: Vec<Rect>,
+    wireframe_enabled: bool,
+    lod_probe_enabled: bool,
+}
+
+#[allow(unused, dead_code)]
+pub struct GuiUpdateDescriptor {
     pub wireframe_enabled: bool,
-    tri_count: u32,
+    pub lod_probe_enabled: bool,
 }
 
 impl Gui {
@@ -49,10 +56,9 @@ impl Gui {
             },
             frame_started: false,
             average_frame_ms: None,
-            camera_position: None,
             rects: Vec::with_capacity(10),
             wireframe_enabled: true,
-            tri_count: 0,
+            lod_probe_enabled: true,
         }
     }
 
@@ -62,10 +68,6 @@ impl Gui {
 
     pub fn set_frame_ms(&mut self, frame_ms: f32) {
         self.average_frame_ms = Some(frame_ms);
-    }
-
-    pub fn set_camera_position(&mut self, camera_position: Vector3<f32>) {
-        self.camera_position = Some(camera_position);
     }
 
     pub fn is_intersecting(&self, position: &PhysicalPosition<f64>) -> bool {
@@ -81,11 +83,14 @@ impl Gui {
         false
     }
 
-    pub fn set_tri_count(&mut self, tri_count: u32) {
-        self.tri_count = tri_count;
+    pub fn get_update_descriptor(&self) -> GuiUpdateDescriptor {
+        GuiUpdateDescriptor {
+            wireframe_enabled: self.wireframe_enabled,
+            lod_probe_enabled: self.lod_probe_enabled,
+        }
     }
 
-    pub fn begin_frame(&mut self, window: &Window) {
+    pub fn begin_frame(&mut self, window: &Window, update_descriptor: &UpdateDescriptor) {
         let raw_input = self.state.take_egui_input(window);
         let context = self.state.egui_ctx();
         context.begin_pass(raw_input);
@@ -122,16 +127,11 @@ impl Gui {
                             ui.label("Z/U");
                             ui.end_row();
 
-                            let (x, y, z): (String, String, String) =
-                                if let Some(camera_position) = self.camera_position {
-                                    (
-                                        format!("{:.1}", camera_position.x),
-                                        format!("{:.1}", camera_position.y),
-                                        format!("{:.1}", camera_position.z),
-                                    )
-                                } else {
-                                    ("-".to_string(), "-".to_string(), "-".to_string())
-                                };
+                            let (x, y, z) = (
+                                format!("{:.1}", update_descriptor.controls.camera_position.x),
+                                format!("{:.1}", update_descriptor.controls.camera_position.y),
+                                format!("{:.1}", update_descriptor.controls.camera_position.z),
+                            );
 
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                 ui.label("Pos:");
@@ -157,7 +157,14 @@ impl Gui {
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                 ui.label("Tri:");
                             });
-                            ui.label(format!("{:}", &self.tri_count));
+                            let tri_count = if let Some(renderer_update_descriptor) =
+                                &update_descriptor.renderer
+                            {
+                                renderer_update_descriptor.tri_count
+                            } else {
+                                0
+                            };
+                            ui.label(format!("{:}", tri_count));
                             ui.end_row();
 
                             // ui.horizontal(|ui| {
@@ -175,6 +182,7 @@ impl Gui {
                             ui.end_row();
                         });
                         ui.checkbox(&mut self.wireframe_enabled, "Mesh wireframe");
+                        ui.checkbox(&mut self.lod_probe_enabled, "LOD Probe");
                     });
             });
 

@@ -3,6 +3,7 @@ use wgpu::{Device, Queue};
 
 use crate::{
     helpers::{
+        constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
         math::it_mat4,
         object::{Object, ObjectOptions, ObjectVertexUniform},
@@ -19,8 +20,8 @@ pub struct PrettySphere {
 
 impl PrettySphere {
     pub fn new(device: &Device) -> Self {
-        let translation = Vector3::new(0.0, 1.3, 0.0);
-        let scale = Vector3::new(1.0, 1.0, 1.0);
+        let translation = Vector3::new(EARTH_RADIUS, 0.0, 0.0);
+        let scale = Vector3::new(500.0, 500.0, 500.0);
         let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
         let object = Object::from_mesh_datas(
             device,

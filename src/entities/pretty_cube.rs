@@ -10,6 +10,7 @@ use crate::{
     primitives::cube::get_cube_mesh_data,
 };
 
+#[allow(unused)]
 pub struct PrettyCube {
     object: Object,
     translation: Vector3<f32>,
@@ -18,6 +19,7 @@ pub struct PrettyCube {
 }
 
 impl PrettyCube {
+    #[allow(unused)]
     pub fn new(device: &Device) -> Self {
         let translation = Vector3::new(-7.0, 0.0, 0.0);
         let scale = Vector3::new(1.0, 1.0, 1.0);

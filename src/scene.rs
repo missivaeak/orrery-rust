@@ -7,7 +7,7 @@ use crate::{
     entities::{cube_planet::CubePlanet, pretty_sphere::PrettySphere},
     helpers::{
         entity::{Entity, UpdateDescriptor},
-        math::create_projection,
+        math::{create_projection, create_view},
         object::{GlobalFragmentUniform, GlobalVertexUniform, Object},
     },
 };
@@ -19,9 +19,14 @@ pub struct Scene {
     projection_mat: Matrix4<f32>,
 }
 
+#[allow(unused, dead_code)]
+pub struct SceneUpdateDescriptor {
+    pub projection_mat: Matrix4<f32>,
+}
+
 impl Scene {
     pub fn new(device: &Device, controls: &Controls, size: LogicalSize<f32>) -> Self {
-        let view_mat = controls.get_view_mat();
+        let view_mat = create_view(controls.camera_position, controls.camera_direction);
         let projection_mat = create_projection(size.width / size.height, true);
         let mut entities: Vec<Box<dyn Entity>> = Vec::new();
         let global_vertex_uniform = GlobalVertexUniform {
@@ -56,28 +61,20 @@ impl Scene {
         }
     }
 
-    pub fn update(&mut self, queue: &Queue, update_descriptor_partial: &UpdateDescriptor) {
-        self.global_vertex_uniform.view_mat = update_descriptor_partial.view_mat.into();
-        self.global_vertex_uniform.projection_mat = self.projection_mat.into();
-
-        let update_descriptor =
-            if let Some(projection_mat) = update_descriptor_partial.projection_mat {
-                self.projection_mat = projection_mat;
-                update_descriptor_partial
-            } else {
-                &UpdateDescriptor {
-                    delta_time: update_descriptor_partial.delta_time,
-                    total_time: update_descriptor_partial.total_time,
-                    camera_position: update_descriptor_partial.camera_position,
-                    view_mat: update_descriptor_partial.view_mat,
-                    projection_mat: Some(self.projection_mat),
-                }
-            };
+    pub fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) {
+        self.global_vertex_uniform.view_mat = update_descriptor.controls.view_mat.into();
+        self.global_vertex_uniform.projection_mat = update_descriptor.scene.projection_mat.into();
 
         for entity in self.entities.iter_mut() {
             if let Err(error) = entity.update(queue, update_descriptor) {
                 println!("{:?}", error)
             }
+        }
+    }
+
+    pub fn get_update_descriptor(&self) -> SceneUpdateDescriptor {
+        SceneUpdateDescriptor {
+            projection_mat: self.projection_mat,
         }
     }
 

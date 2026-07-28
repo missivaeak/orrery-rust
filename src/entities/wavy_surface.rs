@@ -13,6 +13,7 @@ use crate::helpers::{
 
 use wgpu::{Device, Queue};
 
+#[allow(unused)]
 pub struct WavySurface {
     object: Object,
     translation: Vector3<f32>,
@@ -21,6 +22,7 @@ pub struct WavySurface {
 }
 
 impl WavySurface {
+    #[allow(unused)]
     pub fn new(device: &Device) -> Self {
         let translation = Vector3::new(-50.0, -90.0, -30.0);
         let scale = Vector3::new(1.0, 1.0, 1.0);
@@ -58,6 +60,7 @@ impl Entity for WavySurface {
     }
 }
 
+#[allow(unused)]
 pub fn sinc(x: f32, y: f32) -> [f32; 3] {
     let r = (x * x + y * y).sqrt();
     let z = if r == 0.0 { 1.0 } else { r.sin() / r };

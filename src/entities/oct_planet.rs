@@ -10,6 +10,7 @@ use crate::helpers::{
     vertex::Vertex,
 };
 
+#[allow(unused)]
 pub struct OctPlanet {
     object: Object,
     translation: Vector3<f32>,
@@ -18,6 +19,7 @@ pub struct OctPlanet {
 }
 
 impl OctPlanet {
+    #[allow(unused)]
     pub fn new(device: &Device) -> Self {
         let translation = Vector3::new(-7.0, -7.0, -3.0);
         let scale = Vector3::new(1.0, 1.0, 1.0);
@@ -42,7 +44,7 @@ impl OctPlanet {
 
 impl Entity for OctPlanet {
     fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
-        let dt = update_descriptor.delta_time.as_secs_f32();
+        let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
         let speed = 10.0;

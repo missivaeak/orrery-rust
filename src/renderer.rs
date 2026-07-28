@@ -1,4 +1,5 @@
 use crate::helpers::constants::BACKGROUND_COLOUR;
+use crate::helpers::entity::UpdateDescriptor;
 use crate::helpers::object::{GlobalFragmentUniform, GlobalVertexUniform, Object};
 use crate::helpers::vertex::Vertex;
 use std::{borrow::Cow, sync::Arc};
@@ -50,6 +51,10 @@ pub struct Renderer {
     pub size: winit::dpi::PhysicalSize<u32>,
     render_group_map: HashMap<RenderGroupType, RenderGroup>,
     wireframe_render_group: RenderGroup,
+}
+
+pub struct RendererUpdateDescriptor {
+    pub tri_count: u32,
 }
 
 impl Renderer {
@@ -134,10 +139,10 @@ impl Renderer {
         objects_iter: impl Iterator<Item = &'a Object>,
         global_vertex_uniform: &GlobalVertexUniform,
         global_fragment_uniform: &GlobalFragmentUniform,
+        update_descriptor: UpdateDescriptor,
         mut egui_render: F,
-        render_wireframes: bool,
     ) where
-        F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView, u32),
+        F: FnMut(&Device, &Queue, &mut CommandEncoder, &TextureView, &UpdateDescriptor),
     {
         let mut object_map: HashMap<RenderGroupType, Vec<&Object>> = HashMap::new();
         let objects: Vec<&Object> = objects_iter.collect();
@@ -281,7 +286,7 @@ impl Renderer {
                 }
             }
 
-            if render_wireframes {
+            if update_descriptor.gui.wireframe_enabled {
                 let mut wireframe_rpass = encoder.begin_render_pass(&RenderPassDescriptor {
                     label: None,
                     color_attachments: &[Some(RenderPassColorAttachment {
@@ -361,7 +366,21 @@ impl Renderer {
                 }
             }
 
-            egui_render(&self.device, &self.queue, &mut encoder, &view, tri_count);
+            let update_descriptor = UpdateDescriptor {
+                renderer: Some(RendererUpdateDescriptor { tri_count }),
+                app: update_descriptor.app,
+                controls: update_descriptor.controls,
+                scene: update_descriptor.scene,
+                gui: update_descriptor.gui,
+            };
+
+            egui_render(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                &view,
+                &update_descriptor,
+            );
 
             self.queue.submit(Some(encoder.finish()));
 

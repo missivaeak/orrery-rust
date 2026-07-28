@@ -1,6 +1,6 @@
 use cgmath::{
-    Deg, InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector2,
-    Vector3, Vector4, VectorSpace, num_traits::*,
+    Deg, InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3,
+    VectorSpace, num_traits::*,
 };
 
 use wgpu::{
@@ -10,10 +10,11 @@ use wgpu::{
 
 use crate::{
     helpers::{
+        constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
-        math::{ilerp, it_mat4},
+        math::it_mat4,
         mesh::{Mesh, MeshData},
-        object::{self, Object, ObjectFragmentUniform, ObjectOptions, ObjectVertexUniform},
+        object::{Object, ObjectFragmentUniform, ObjectVertexUniform},
         vertex::Vertex,
     },
     renderer::RenderGroupType,
@@ -30,26 +31,28 @@ pub struct CubePlanet {
 impl CubePlanet {
     pub fn new(device: &Device) -> Self {
         let translation = Vector3::new(0.0, 0.0, 0.0);
-        let scale = Vector3::new(1.0, 1.0, 1.0);
+        let scale = Vector3::new(1.0, 1.0, 1.0) * EARTH_RADIUS;
         let axis = Vector3::new(1.0, -1.0, 0.0).normalize();
         let angle = Rad((1.0 / 3.0.sqrt()).acos());
         let rotation = Quaternion::from_axis_angle(axis, angle);
 
-        let radius = 1.0;
         let faces = vec![
-            Face::new(Vector3::unit_x(), radius),
-            Face::new(Vector3::unit_x() * -1.0, radius),
-            Face::new(Vector3::unit_y(), radius),
-            Face::new(Vector3::unit_y() * -1.0, radius),
-            Face::new(Vector3::unit_z(), radius),
-            Face::new(Vector3::unit_z() * -1.0, radius),
+            Face::new(Vector3::unit_x()),
+            Face::new(Vector3::unit_x() * -1.0),
+            Face::new(Vector3::unit_y()),
+            Face::new(Vector3::unit_y() * -1.0),
+            Face::new(Vector3::unit_z()),
+            Face::new(Vector3::unit_z() * -1.0),
         ];
         let model_mat = Matrix4::from_translation(Vector3::new(-7.0, -7.0, -3.0));
 
         let meshes: Vec<Mesh> = faces
             .iter()
             .map(|face| {
-                let MeshData { vertices, indices } = face.get_mesh_data(Vector3::unit_y());
+                let MeshData {
+                    vertices: _vertices,
+                    indices,
+                } = face.get_mesh_data(Vector3::unit_y());
                 let vertex_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
                     size: 14272000,
@@ -110,27 +113,23 @@ struct Face {
     pub normal: Vector3<f32>,
     pub tangent: Vector3<f32>,
 
-    /// Radius of the planet.
-    pub radius: f32,
-
     /// Maximum and minium subdivision depth.
     pub max_depth: u32,
     pub min_depth: u32,
 }
 
 impl Face {
-    pub fn new(normal: Vector3<f32>, radius: f32) -> Self {
+    pub fn new(normal: Vector3<f32>) -> Self {
         Self {
             normal,
             tangent: normal.yzx(),
-            radius,
             max_depth: 7,
             min_depth: 2,
         }
     }
     fn get_mesh_data(&self, camera_position: Vector3<f32>) -> MeshData {
         let binormal = self.normal.cross(self.tangent);
-        let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
+        // let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
         let mut mesh_data = MeshData {
             vertices: Vec::with_capacity(4),
             indices: Vec::with_capacity(6),
@@ -369,7 +368,7 @@ impl Face {
 
 impl Entity for CubePlanet {
     fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
-        let dt = update_descriptor.delta_time.as_secs_f32();
+        let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
         let speed = 10.0;
@@ -387,10 +386,14 @@ impl Entity for CubePlanet {
         // pull out vector3 out of self.quad_tree_roots here
         // populate meshes with vertices and indices
 
-        let camera_position = Vector3 {
-            x: 0.0,
-            y: 1.3,
-            z: 0.0,
+        let camera_position = if update_descriptor.gui.lod_probe_enabled {
+            Vector3 {
+                x: EARTH_RADIUS,
+                y: 0.0,
+                z: 0.0,
+            }
+        } else {
+            update_descriptor.controls.camera_position
         };
 
         let camera_position_local = model_mat
@@ -398,11 +401,6 @@ impl Entity for CubePlanet {
             .expect("Failed to invert cube_planet model matrix")
             .transform_vector(camera_position)
             .normalize();
-        // let camera_position_local = model_mat.transform_vector(Vector3 {
-        //     x: 0.0,
-        //     y: 1.3,
-        //     z: 0.0,
-        // });
 
         for (i, mesh_data) in self
             .faces
@@ -442,6 +440,7 @@ impl Entity for CubePlanet {
     }
 }
 
+#[allow(unused)]
 fn map_cube_to_sphere(cube_point: Vector3<f32>) -> Vector3<f32> {
     let x_2: f32 = cube_point.x.pow(2);
     let y_2: f32 = cube_point.y.pow(2);

@@ -4,10 +4,143 @@ use cgmath::{ElementWise, Vector2, Vector3};
 
 use crate::helpers::{mesh::MeshData, vertex::Vertex};
 
+#[allow(unused)]
 pub fn get_cube_mesh_data() -> MeshData {
-    let positions = cube_positions();
-    let normals = cube_normals();
-    let uvs = cube_uvs();
+    let positions = [
+        // front (0.0, 0.0, 1.0)
+        Vector3::new(-1.0, -1.0, 1.0),
+        Vector3::new(1.0, -1.0, 1.0),
+        Vector3::new(-1.0, 1.0, 1.0),
+        Vector3::new(-1.0, 1.0, 1.0),
+        Vector3::new(1.0, -1.0, 1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        // right (1.0, 0.0, 0.0)
+        Vector3::new(1.0, -1.0, 1.0),
+        Vector3::new(1.0, -1.0, -1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(1.0, -1.0, -1.0),
+        Vector3::new(1.0, 1.0, -1.0),
+        // back (0.0, 0.0, -1.0)
+        Vector3::new(1.0, -1.0, -1.0),
+        Vector3::new(-1.0, -1.0, -1.0),
+        Vector3::new(1.0, 1.0, -1.0),
+        Vector3::new(1.0, 1.0, -1.0),
+        Vector3::new(-1.0, -1.0, -1.0),
+        Vector3::new(-1.0, 1.0, -1.0),
+        // left (-1.0, 0.0, 0.0)
+        Vector3::new(-1.0, -1.0, -1.0),
+        Vector3::new(-1.0, -1.0, 1.0),
+        Vector3::new(-1.0, 1.0, -1.0),
+        Vector3::new(-1.0, 1.0, -1.0),
+        Vector3::new(-1.0, -1.0, 1.0),
+        Vector3::new(-1.0, 1.0, 1.0),
+        // top (0.0, 1.0, 0.0)
+        Vector3::new(-1.0, 1.0, 1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(-1.0, 1.0, -1.0),
+        Vector3::new(-1.0, 1.0, -1.0),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(1.0, 1.0, -1.0),
+        // bottom (0.0, -1.0, 0.0)
+        Vector3::new(-1.0, -1.0, -1.0),
+        Vector3::new(1.0, -1.0, -1.0),
+        Vector3::new(-1.0, -1.0, 1.0),
+        Vector3::new(-1.0, -1.0, 1.0),
+        Vector3::new(1.0, -1.0, -1.0),
+        Vector3::new(1.0, -1.0, 1.0),
+    ];
+
+    let normals = [
+        // front (0.0, 0.0, 1.0)
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        Vector3::new(0.0, 0.0, 1.0),
+        // right (1.0, 0.0, 0.0)
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        // back (0.0, 0.0, -1.0)
+        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(0.0, 0.0, -1.0),
+        // left (-1.0, 0.0, 0.0)
+        Vector3::new(-1.0, 0.0, 0.0),
+        Vector3::new(-1.0, 0.0, 0.0),
+        Vector3::new(-1.0, 0.0, 0.0),
+        Vector3::new(-1.0, 0.0, 0.0),
+        Vector3::new(-1.0, 0.0, 0.0),
+        Vector3::new(-1.0, 0.0, 0.0),
+        // top (0.0, 1.0, 0.0)
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        // bottom (0.0, -1.0, 0.0)
+        Vector3::new(0.0, -1.0, 0.0),
+        Vector3::new(0.0, -1.0, 0.0),
+        Vector3::new(0.0, -1.0, 0.0),
+        Vector3::new(0.0, -1.0, 0.0),
+        Vector3::new(0.0, -1.0, 0.0),
+        Vector3::new(0.0, -1.0, 0.0),
+    ];
+
+    let uvs = [
+        // front (0.0, 0.0, 1.0)
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        // right (1.0, 0.0, 0.0)
+        Vector2::new(0.0, 1.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 0.0),
+        // back (0.0, 0.0, -1.0)
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        // left (-1.0, 0.0, 0.0)
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 0.0),
+        // top (0.0, 1.0, 0.0)
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(0.0, 0.0),
+        Vector2::new(1.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        // bottom (0.0, -1.0, 0.0)
+        Vector2::new(1.0, 1.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(1.0, 0.0),
+        Vector2::new(0.0, 1.0),
+        Vector2::new(0.0, 0.0),
+    ];
+
     let vertices = {
         let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
         for i in 0..positions.len() {
@@ -30,149 +163,150 @@ pub fn get_cube_mesh_data() -> MeshData {
 
     MeshData { vertices, indices }
 }
-pub fn cube_positions() -> Vec<Vector3<f32>> {
-    [
-        // front (0.0, 0.0, 1.0)
-        Vector3::new(-1.0, -1.0, 1.0),
-        Vector3::new(1.0, -1.0, 1.0),
-        Vector3::new(-1.0, 1.0, 1.0),
-        Vector3::new(-1.0, 1.0, 1.0),
-        Vector3::new(1.0, -1.0, 1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        // right (1.0, 0.0, 0.0)
-        Vector3::new(1.0, -1.0, 1.0),
-        Vector3::new(1.0, -1.0, -1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        Vector3::new(1.0, -1.0, -1.0),
-        Vector3::new(1.0, 1.0, -1.0),
-        // back (0.0, 0.0, -1.0)
-        Vector3::new(1.0, -1.0, -1.0),
-        Vector3::new(-1.0, -1.0, -1.0),
-        Vector3::new(1.0, 1.0, -1.0),
-        Vector3::new(1.0, 1.0, -1.0),
-        Vector3::new(-1.0, -1.0, -1.0),
-        Vector3::new(-1.0, 1.0, -1.0),
-        // left (-1.0, 0.0, 0.0)
-        Vector3::new(-1.0, -1.0, -1.0),
-        Vector3::new(-1.0, -1.0, 1.0),
-        Vector3::new(-1.0, 1.0, -1.0),
-        Vector3::new(-1.0, 1.0, -1.0),
-        Vector3::new(-1.0, -1.0, 1.0),
-        Vector3::new(-1.0, 1.0, 1.0),
-        // top (0.0, 1.0, 0.0)
-        Vector3::new(-1.0, 1.0, 1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        Vector3::new(-1.0, 1.0, -1.0),
-        Vector3::new(-1.0, 1.0, -1.0),
-        Vector3::new(1.0, 1.0, 1.0),
-        Vector3::new(1.0, 1.0, -1.0),
-        // bottom (0.0, -1.0, 0.0)
-        Vector3::new(-1.0, -1.0, -1.0),
-        Vector3::new(1.0, -1.0, -1.0),
-        Vector3::new(-1.0, -1.0, 1.0),
-        Vector3::new(-1.0, -1.0, 1.0),
-        Vector3::new(1.0, -1.0, -1.0),
-        Vector3::new(1.0, -1.0, 1.0),
-    ]
-    .to_vec()
-}
 
-pub fn cube_normals() -> Vec<Vector3<f32>> {
-    [
-        // front (0.0, 0.0, 1.0)
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        Vector3::new(0.0, 0.0, 1.0),
-        // right (1.0, 0.0, 0.0)
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        // back (0.0, 0.0, -1.0)
-        Vector3::new(0.0, 0.0, -1.0),
-        Vector3::new(0.0, 0.0, -1.0),
-        Vector3::new(0.0, 0.0, -1.0),
-        Vector3::new(0.0, 0.0, -1.0),
-        Vector3::new(0.0, 0.0, -1.0),
-        Vector3::new(0.0, 0.0, -1.0),
-        // left (-1.0, 0.0, 0.0)
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        Vector3::new(-1.0, 0.0, 0.0),
-        // top (0.0, 1.0, 0.0)
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        // bottom (0.0, -1.0, 0.0)
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-        Vector3::new(0.0, -1.0, 0.0),
-    ]
-    .to_vec()
-}
-
-pub fn cube_uvs() -> Vec<Vector2<f32>> {
-    [
-        // front (0.0, 0.0, 1.0)
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        // right (1.0, 0.0, 0.0)
-        Vector2::new(0.0, 1.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        // back (0.0, 0.0, -1.0)
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        // left (-1.0, 0.0, 0.0)
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 0.0),
-        // top (0.0, 1.0, 0.0)
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(0.0, 0.0),
-        Vector2::new(1.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        // bottom (0.0, -1.0, 0.0)
-        Vector2::new(1.0, 1.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(1.0, 0.0),
-        Vector2::new(0.0, 1.0),
-        Vector2::new(0.0, 0.0),
-    ]
-    .to_vec()
-}
+// pub fn cube_positions() -> Vec<Vector3<f32>> {
+//     [
+//         // front (0.0, 0.0, 1.0)
+//         Vector3::new(-1.0, -1.0, 1.0),
+//         Vector3::new(1.0, -1.0, 1.0),
+//         Vector3::new(-1.0, 1.0, 1.0),
+//         Vector3::new(-1.0, 1.0, 1.0),
+//         Vector3::new(1.0, -1.0, 1.0),
+//         Vector3::new(1.0, 1.0, 1.0),
+//         // right (1.0, 0.0, 0.0)
+//         Vector3::new(1.0, -1.0, 1.0),
+//         Vector3::new(1.0, -1.0, -1.0),
+//         Vector3::new(1.0, 1.0, 1.0),
+//         Vector3::new(1.0, 1.0, 1.0),
+//         Vector3::new(1.0, -1.0, -1.0),
+//         Vector3::new(1.0, 1.0, -1.0),
+//         // back (0.0, 0.0, -1.0)
+//         Vector3::new(1.0, -1.0, -1.0),
+//         Vector3::new(-1.0, -1.0, -1.0),
+//         Vector3::new(1.0, 1.0, -1.0),
+//         Vector3::new(1.0, 1.0, -1.0),
+//         Vector3::new(-1.0, -1.0, -1.0),
+//         Vector3::new(-1.0, 1.0, -1.0),
+//         // left (-1.0, 0.0, 0.0)
+//         Vector3::new(-1.0, -1.0, -1.0),
+//         Vector3::new(-1.0, -1.0, 1.0),
+//         Vector3::new(-1.0, 1.0, -1.0),
+//         Vector3::new(-1.0, 1.0, -1.0),
+//         Vector3::new(-1.0, -1.0, 1.0),
+//         Vector3::new(-1.0, 1.0, 1.0),
+//         // top (0.0, 1.0, 0.0)
+//         Vector3::new(-1.0, 1.0, 1.0),
+//         Vector3::new(1.0, 1.0, 1.0),
+//         Vector3::new(-1.0, 1.0, -1.0),
+//         Vector3::new(-1.0, 1.0, -1.0),
+//         Vector3::new(1.0, 1.0, 1.0),
+//         Vector3::new(1.0, 1.0, -1.0),
+//         // bottom (0.0, -1.0, 0.0)
+//         Vector3::new(-1.0, -1.0, -1.0),
+//         Vector3::new(1.0, -1.0, -1.0),
+//         Vector3::new(-1.0, -1.0, 1.0),
+//         Vector3::new(-1.0, -1.0, 1.0),
+//         Vector3::new(1.0, -1.0, -1.0),
+//         Vector3::new(1.0, -1.0, 1.0),
+//     ]
+//     .to_vec()
+// }
+//
+// pub fn cube_normals() -> Vec<Vector3<f32>> {
+//     [
+//         // front (0.0, 0.0, 1.0)
+//         Vector3::new(0.0, 0.0, 1.0),
+//         Vector3::new(0.0, 0.0, 1.0),
+//         Vector3::new(0.0, 0.0, 1.0),
+//         Vector3::new(0.0, 0.0, 1.0),
+//         Vector3::new(0.0, 0.0, 1.0),
+//         Vector3::new(0.0, 0.0, 1.0),
+//         // right (1.0, 0.0, 0.0)
+//         Vector3::new(1.0, 0.0, 0.0),
+//         Vector3::new(1.0, 0.0, 0.0),
+//         Vector3::new(1.0, 0.0, 0.0),
+//         Vector3::new(1.0, 0.0, 0.0),
+//         Vector3::new(1.0, 0.0, 0.0),
+//         Vector3::new(1.0, 0.0, 0.0),
+//         // back (0.0, 0.0, -1.0)
+//         Vector3::new(0.0, 0.0, -1.0),
+//         Vector3::new(0.0, 0.0, -1.0),
+//         Vector3::new(0.0, 0.0, -1.0),
+//         Vector3::new(0.0, 0.0, -1.0),
+//         Vector3::new(0.0, 0.0, -1.0),
+//         Vector3::new(0.0, 0.0, -1.0),
+//         // left (-1.0, 0.0, 0.0)
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         Vector3::new(-1.0, 0.0, 0.0),
+//         // top (0.0, 1.0, 0.0)
+//         Vector3::new(0.0, 1.0, 0.0),
+//         Vector3::new(0.0, 1.0, 0.0),
+//         Vector3::new(0.0, 1.0, 0.0),
+//         Vector3::new(0.0, 1.0, 0.0),
+//         Vector3::new(0.0, 1.0, 0.0),
+//         Vector3::new(0.0, 1.0, 0.0),
+//         // bottom (0.0, -1.0, 0.0)
+//         Vector3::new(0.0, -1.0, 0.0),
+//         Vector3::new(0.0, -1.0, 0.0),
+//         Vector3::new(0.0, -1.0, 0.0),
+//         Vector3::new(0.0, -1.0, 0.0),
+//         Vector3::new(0.0, -1.0, 0.0),
+//         Vector3::new(0.0, -1.0, 0.0),
+//     ]
+//     .to_vec()
+// }
+//
+// pub fn cube_uvs() -> Vec<Vector2<f32>> {
+//     [
+//         // front (0.0, 0.0, 1.0)
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(1.0, 1.0),
+//         // right (1.0, 0.0, 0.0)
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(1.0, 0.0),
+//         // back (0.0, 0.0, -1.0)
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         // left (-1.0, 0.0, 0.0)
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(0.0, 0.0),
+//         // top (0.0, 1.0, 0.0)
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(0.0, 0.0),
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         // bottom (0.0, -1.0, 0.0)
+//         Vector2::new(1.0, 1.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(1.0, 0.0),
+//         Vector2::new(0.0, 1.0),
+//         Vector2::new(0.0, 0.0),
+//     ]
+//     .to_vec()
+// }
 
 // pub fn cube_colors() -> Vec<Vector4<f32>> {
 //     [

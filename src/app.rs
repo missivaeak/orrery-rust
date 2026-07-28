@@ -64,6 +64,12 @@ pub struct App {
     size: Option<LogicalSize<f32>>,
 }
 
+#[allow(unused, dead_code)]
+pub struct AppUpdateDescriptor {
+    pub total_time: Duration,
+    pub delta_time: Duration,
+}
+
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         println!("Initialising...");
@@ -169,44 +175,37 @@ impl ApplicationHandler for App {
                     }
                 }
 
-                if let Some(gui) = &mut self.gui
-                    && let Some(controls) = &mut self.controls
-                {
-                    gui.set_camera_position(controls.camera_position);
-                }
-
                 if let Some(renderer) = &mut self.renderer
                     && let Some(scene) = &mut self.scene
                     && let Some(controls) = &mut self.controls
                     && let Some(gui) = &mut self.gui
                     && let Some(window) = &self.window
                 {
-                    controls.update();
-                    scene.update(
-                        &renderer.queue,
-                        &UpdateDescriptor {
-                            view_mat: controls.get_view_mat(),
-                            projection_mat: None,
-                            camera_position: controls.camera_position,
+                    let update_descriptor = UpdateDescriptor {
+                        controls: controls.get_update_descriptor(),
+                        scene: scene.get_update_descriptor(),
+                        app: AppUpdateDescriptor {
                             total_time,
                             delta_time,
                         },
-                    );
+                        renderer: None,
+                        gui: gui.get_update_descriptor(),
+                    };
+
+                    controls.update(&update_descriptor);
+                    scene.update(&renderer.queue, &update_descriptor);
                     let (vertex_uniform, fragment_uniform) = scene.get_global_uniforms();
                     let objects_iter = scene.get_objects_iter();
-                    let render_wireframe = gui.wireframe_enabled;
-
-                    gui.begin_frame(window);
 
                     renderer.render(
                         objects_iter,
                         vertex_uniform,
                         fragment_uniform,
-                        |device, queue, encoder, view, tri_count| {
-                            gui.set_tri_count(tri_count);
+                        update_descriptor,
+                        |device, queue, encoder, view, update_descriptor| {
+                            gui.begin_frame(window, update_descriptor);
                             gui.end_frame_and_draw(device, queue, encoder, window, view)
                         },
-                        render_wireframe,
                     );
                 }
 
