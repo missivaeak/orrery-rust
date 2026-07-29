@@ -38,6 +38,7 @@ pub struct ControlsUpdateDescriptor {
     pub view_mat: Matrix4<f32>,
     pub camera_position: Vector3<f32>,
     pub camera_direction: Vector3<f32>,
+    pub speed: f32,
 }
 
 impl Controls {
@@ -59,16 +60,6 @@ impl Controls {
             down_pressed: false,
             camera_controlled: false,
             cursor_position: None,
-        }
-    }
-
-    pub fn get_update_descriptor(&self) -> ControlsUpdateDescriptor {
-        let view_mat = create_view(self.camera_position, self.camera_direction);
-        println!("{:?}", self.camera_position);
-        ControlsUpdateDescriptor {
-            view_mat,
-            camera_position: self.camera_position,
-            camera_direction: self.camera_direction,
         }
     }
 
@@ -107,8 +98,18 @@ impl Controls {
         }
     }
 
-    pub fn update(&mut self, _update_descriptor: &UpdateDescriptor) {
-        let mut speed = self.velocity.magnitude();
+    pub fn get_update_descriptor(&self) -> ControlsUpdateDescriptor {
+        let view_mat = create_view(self.camera_position, self.camera_direction);
+        ControlsUpdateDescriptor {
+            view_mat,
+            camera_position: self.camera_position,
+            camera_direction: self.camera_direction,
+            speed: self.velocity.magnitude(),
+        }
+    }
+
+    pub fn update(&mut self, update_descriptor: &UpdateDescriptor) {
+        let mut speed = update_descriptor.controls.speed;
         let breaking = self.breaking_fixed + (speed * self.breaking_factor);
 
         if speed < breaking {

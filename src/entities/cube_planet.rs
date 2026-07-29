@@ -123,10 +123,11 @@ impl Face {
         Self {
             normal,
             tangent: normal.yzx(),
-            max_depth: 7,
+            max_depth: 10,
             min_depth: 2,
         }
     }
+
     fn get_mesh_data(
         &self,
         camera_position: Vector3<f32>,
@@ -145,11 +146,6 @@ impl Face {
                 (self.normal + self.tangent - binormal),
                 (self.normal + self.tangent + binormal),
                 (self.normal - self.tangent + binormal),
-                // (self.normal - self.tangent - binormal).normalize(),
-                // (self.normal + self.tangent - binormal).normalize(),
-                // (self.normal + self.tangent + binormal).normalize(),
-                // (self.normal - self.tangent + binormal).normalize(),
-                // antehaoe
             ],
             0,
             camera_position,
@@ -179,9 +175,12 @@ impl Face {
         let screen_space_factor = area / distance;
         let threshold: f32 = 0.005;
 
-        if [top_left, top_right, bottom_right, bottom_left]
-            .iter()
-            .all(|corner| corner.dot(camera_direction) > 0.0)
+        let horizon_cos = 1.0 / camera_position.magnitude();
+
+        if depth > 0
+            && [top_left, top_right, bottom_right, bottom_left]
+                .iter()
+                .all(|corner| corner.dot(camera_position.normalize()) < horizon_cos)
         {
             return;
         }
@@ -277,7 +276,7 @@ impl Entity for CubePlanet {
         let (camera_position, camera_direction) = if update_descriptor.gui.lod_probe_enabled {
             (
                 Vector3 {
-                    x: EARTH_RADIUS,
+                    x: EARTH_RADIUS * 1.1,
                     y: 0.0,
                     z: 0.0,
                 },
@@ -291,12 +290,6 @@ impl Entity for CubePlanet {
         };
 
         if let Some(model_mat_i) = model_mat.invert() {
-            let camera_position_local = model_mat
-                .invert()
-                .expect("Failed to invert cube_planet model matrix")
-                .transform_vector(camera_position)
-                .normalize();
-
             for (i, mesh_data) in self
                 .faces
                 .iter()

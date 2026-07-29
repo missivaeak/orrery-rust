@@ -10,8 +10,9 @@ pub struct UpdateDescriptor {
     pub app: AppUpdateDescriptor,
     pub controls: ControlsUpdateDescriptor,
     pub scene: SceneUpdateDescriptor,
-    pub renderer: Option<RendererUpdateDescriptor>,
     pub gui: GuiUpdateDescriptor,
+    // This is optional because it requires the update to have been through the renderer
+    pub renderer: Option<RendererUpdateDescriptor>,
 }
 
 pub trait Entity {

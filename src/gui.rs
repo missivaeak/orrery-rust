@@ -167,6 +167,13 @@ impl Gui {
                             ui.label(format!("{:}", tri_count));
                             ui.end_row();
 
+                            println!("{:}", update_descriptor.controls.speed);
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label("Speed:");
+                            });
+                            ui.label(format!("{:.1}", update_descriptor.controls.speed * 100.0));
+                            ui.end_row();
+
                             // ui.horizontal(|ui| {
                             //     ui.label("he");
                             // });
