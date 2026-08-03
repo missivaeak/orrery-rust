@@ -53,6 +53,7 @@ pub struct Renderer {
     wireframe_render_group: RenderGroup,
 }
 
+#[derive(Clone, Default)]
 pub struct RendererUpdateDescriptor {
     pub tri_count: u32,
 }

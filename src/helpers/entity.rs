@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[allow(unused, dead_code)]
+#[derive(Default, Clone)]
 pub struct UpdateDescriptor {
     pub app: AppUpdateDescriptor,
     pub controls: ControlsUpdateDescriptor,

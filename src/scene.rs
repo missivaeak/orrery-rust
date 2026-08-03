@@ -1,4 +1,4 @@
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Zero};
 use wgpu::{Device, Queue};
 use winit::dpi::LogicalSize;
 
@@ -20,8 +20,17 @@ pub struct Scene {
 }
 
 #[allow(unused, dead_code)]
+#[derive(Clone)]
 pub struct SceneUpdateDescriptor {
     pub projection_mat: Matrix4<f32>,
+}
+
+impl Default for SceneUpdateDescriptor {
+    fn default() -> Self {
+        Self {
+            projection_mat: Matrix4::zero(),
+        }
+    }
 }
 
 impl Scene {

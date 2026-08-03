@@ -1,8 +1,9 @@
 use cgmath::num_traits::ToPrimitive;
 use egui::{
     Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Shadow,
-    ViewportId,
+    Slider, Ui, ViewportId,
 };
+use egui_extras::{Size, Strip, StripBuilder};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use egui_winit::State;
 use wgpu::{CommandEncoder, Device, Queue, StoreOp, TextureFormat, TextureView};
@@ -22,12 +23,25 @@ pub struct Gui {
     rects: Vec<Rect>,
     wireframe_enabled: bool,
     lod_probe_enabled: bool,
+    lod_distance_threshold: f32,
 }
 
 #[allow(unused, dead_code)]
+#[derive(Clone)]
 pub struct GuiUpdateDescriptor {
     pub wireframe_enabled: bool,
     pub lod_probe_enabled: bool,
+    pub lod_distance_threshold: f32,
+}
+
+impl Default for GuiUpdateDescriptor {
+    fn default() -> Self {
+        Self {
+            wireframe_enabled: true,
+            lod_probe_enabled: true,
+            lod_distance_threshold: 1.0,
+        }
+    }
 }
 
 impl Gui {
@@ -59,6 +73,7 @@ impl Gui {
             rects: Vec::with_capacity(10),
             wireframe_enabled: true,
             lod_probe_enabled: true,
+            lod_distance_threshold: 1.0,
         }
     }
 
@@ -87,6 +102,7 @@ impl Gui {
         GuiUpdateDescriptor {
             wireframe_enabled: self.wireframe_enabled,
             lod_probe_enabled: self.lod_probe_enabled,
+            lod_distance_threshold: self.lod_distance_threshold,
         }
     }
 
@@ -111,85 +127,177 @@ impl Gui {
                         ..Default::default()
                     })
                     .show(ui, |ui| {
-                        let style = ui.style_mut();
-                        style.text_styles.insert(
+                        ui.style_mut().text_styles.insert(
                             egui::TextStyle::Body,
                             egui::FontId::new(16.0, egui::FontFamily::Monospace),
                         );
+                        ui.set_min_size([120.0, 0.0].into());
 
-                        // ui.set_min_size([120.0, 0.0].into());
-                        // ui.set_min_width(120.0);
+                        let (x, y, z) = (
+                            format!("{:.1}", update_descriptor.controls.camera_position.x),
+                            format!("{:.1}", update_descriptor.controls.camera_position.y),
+                            format!("{:.1}", update_descriptor.controls.camera_position.z),
+                        );
 
-                        egui::Grid::new("stats_grid").num_columns(2).show(ui, |ui| {
-                            ui.label("");
-                            ui.label("X/R");
-                            ui.label("Y/F");
-                            ui.label("Z/U");
-                            ui.end_row();
+                        let fps = if let Some(ms) = self.average_frame_ms {
+                            format!("{:.1}", (ms / 1000.0).powi(-1))
+                        } else {
+                            "-".to_owned()
+                        };
 
-                            let (x, y, z) = (
-                                format!("{:.1}", update_descriptor.controls.camera_position.x),
-                                format!("{:.1}", update_descriptor.controls.camera_position.y),
-                                format!("{:.1}", update_descriptor.controls.camera_position.z),
-                            );
+                        let tri_count = update_descriptor
+                            .renderer
+                            .as_ref()
+                            .map(|r| r.tri_count)
+                            .unwrap_or(0);
 
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Pos:");
+                        let row_height = 22.0;
+                        let col_width = 60.0;
+
+                        StripBuilder::new(ui)
+                            .sizes(Size::exact(row_height), 8)
+                            .vertical(|mut strip| {
+                                // Header
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .sizes(Size::exact(col_width), 4)
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|_| {});
+                                            strip.cell(|ui| {
+                                                ui.label("X/R");
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label("Y/F");
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label("Z/U");
+                                            });
+                                        });
+                                });
+
+                                // Position
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .sizes(Size::exact(col_width), 4)
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.with_layout(
+                                                    Layout::right_to_left(Align::Center),
+                                                    |ui| {
+                                                        ui.label("Pos:");
+                                                    },
+                                                );
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(&x);
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(&y);
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(&z);
+                                            });
+                                        });
+                                });
+
+                                // FPS
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::exact(col_width))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.with_layout(
+                                                    Layout::right_to_left(Align::Center),
+                                                    |ui| {
+                                                        ui.label("FPS:");
+                                                    },
+                                                );
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(&fps);
+                                            });
+                                        });
+                                });
+
+                                // Triangles
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::exact(col_width))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.with_layout(
+                                                    Layout::right_to_left(Align::Center),
+                                                    |ui| {
+                                                        ui.label("Tri:");
+                                                    },
+                                                );
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(tri_count.to_string());
+                                            });
+                                        });
+                                });
+
+                                // Speed
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::exact(col_width))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.with_layout(
+                                                    Layout::right_to_left(Align::Center),
+                                                    |ui| {
+                                                        ui.label("Speed:");
+                                                    },
+                                                );
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.label(format!(
+                                                    "{:.1}",
+                                                    update_descriptor.controls.speed * 100.0
+                                                ));
+                                            });
+                                        });
+                                });
+
+                                // LOD (label + spanning slider)
+                                strip.cell(|ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::exact(col_width))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.with_layout(
+                                                    Layout::right_to_left(Align::Center),
+                                                    |ui| {
+                                                        ui.label("LOD:");
+                                                    },
+                                                );
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.add_sized(
+                                                    ui.available_size(),
+                                                    Slider::new(
+                                                        &mut self.lod_distance_threshold,
+                                                        0.5..=1.5,
+                                                    ),
+                                                );
+                                            });
+                                        });
+                                });
+
+                                // Full-width rows
+                                strip.cell(|ui| {
+                                    ui.checkbox(&mut self.wireframe_enabled, "Mesh wireframe");
+                                });
+
+                                strip.cell(|ui| {
+                                    ui.checkbox(&mut self.lod_probe_enabled, "LOD Probe");
+                                });
                             });
-                            ui.label(x);
-                            ui.label(y);
-                            ui.label(z);
-                            ui.end_row();
-
-                            let fps: String = if let Some(average_frame_ms) = &self.average_frame_ms
-                            {
-                                format!("{:.1}", (average_frame_ms / 1000.0).powi(-1))
-                            } else {
-                                "-".to_string()
-                            };
-
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("FPS:");
-                            });
-                            ui.label(fps);
-                            ui.end_row();
-
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Tri:");
-                            });
-                            let tri_count = if let Some(renderer_update_descriptor) =
-                                &update_descriptor.renderer
-                            {
-                                renderer_update_descriptor.tri_count
-                            } else {
-                                0
-                            };
-                            ui.label(format!("{:}", tri_count));
-                            ui.end_row();
-
-                            println!("{:}", update_descriptor.controls.speed);
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label("Speed:");
-                            });
-                            ui.label(format!("{:.1}", update_descriptor.controls.speed * 100.0));
-                            ui.end_row();
-
-                            // ui.horizontal(|ui| {
-                            //     ui.label("he");
-                            // });
-                            // ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            //     ui.label("Wiref.");
-                            // });
-                            // if ui
-                            //     .checkbox(&mut self.wireframe_enabled, "Checked")
-                            //     .changed()
-                            // {
-                            //     println!("new value: {}", self.wireframe_enabled);
-                            // }
-                            ui.end_row();
-                        });
-                        ui.checkbox(&mut self.wireframe_enabled, "Mesh wireframe");
-                        ui.checkbox(&mut self.lod_probe_enabled, "LOD Probe");
                     });
             });
 

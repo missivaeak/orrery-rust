@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Matrix4, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
+use cgmath::{Array, InnerSpace, Matrix4, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, MouseButton},
@@ -34,11 +34,23 @@ pub struct Controls {
 }
 
 #[allow(unused, dead_code)]
+#[derive(Clone)]
 pub struct ControlsUpdateDescriptor {
     pub view_mat: Matrix4<f32>,
     pub camera_position: Vector3<f32>,
     pub camera_direction: Vector3<f32>,
     pub speed: f32,
+}
+
+impl Default for ControlsUpdateDescriptor {
+    fn default() -> Self {
+        Self {
+            view_mat: Matrix4::zero(),
+            camera_position: Vector3::zero(),
+            camera_direction: Vector3::zero(),
+            speed: 0.0,
+        }
+    }
 }
 
 impl Controls {
@@ -50,7 +62,7 @@ impl Controls {
             acceleration: (0.0, 0.0, 0.0).into(),
             movement_acceleration: 1.0,
             max_velocity: 0.0001,
-            breaking_fixed: 0.1,
+            breaking_fixed: 0.5,
             breaking_factor: 0.1,
             right_pressed: false,
             left_pressed: false,
@@ -109,23 +121,20 @@ impl Controls {
     }
 
     pub fn update(&mut self, update_descriptor: &UpdateDescriptor) {
-        let mut speed = update_descriptor.controls.speed;
-        let breaking = self.breaking_fixed + (speed * self.breaking_factor);
+        let speed = update_descriptor.controls.speed;
+        let breaking = -self
+            .velocity
+            .normalize_to(self.breaking_fixed + (speed * self.breaking_factor));
 
-        if speed < breaking {
-            self.velocity = Vector3::zero();
-            speed = 0.0;
-        } else {
-            self.velocity = self.velocity.normalize_to(speed - breaking);
-            speed -= breaking;
+        if breaking.is_finite() {
+            if breaking.magnitude2() > self.velocity.magnitude2() {
+                self.velocity = Vector3::zero();
+            } else {
+                self.velocity += breaking;
+            }
         }
 
         self.velocity += self.acceleration;
-
-        if speed > self.max_velocity {
-            self.velocity = self.velocity.normalize_to(self.max_velocity);
-        }
-
         self.camera_position += self.velocity;
     }
 

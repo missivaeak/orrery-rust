@@ -9,6 +9,7 @@ use wgpu::{
 };
 
 use crate::{
+    controls::ControlsUpdateDescriptor,
     helpers::{
         constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
@@ -52,7 +53,7 @@ impl CubePlanet {
                 let MeshData {
                     vertices: _vertices,
                     indices,
-                } = face.get_mesh_data(Vector3::unit_y(), -Vector3::unit_y());
+                } = face.get_mesh_data(&UpdateDescriptor::default());
                 let vertex_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
                     size: 14272000,
@@ -61,7 +62,7 @@ impl CubePlanet {
                 });
                 let index_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
-                    size: 383376,
+                    size: 464040,
                     usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -123,16 +124,12 @@ impl Face {
         Self {
             normal,
             tangent: normal.yzx(),
-            max_depth: 10,
+            max_depth: 15,
             min_depth: 2,
         }
     }
 
-    fn get_mesh_data(
-        &self,
-        camera_position: Vector3<f32>,
-        camera_direction: Vector3<f32>,
-    ) -> MeshData {
+    fn get_mesh_data(&self, update_descriptor: &UpdateDescriptor) -> MeshData {
         let binormal = self.normal.cross(self.tangent);
         // let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
         let mut mesh_data = MeshData {
@@ -148,8 +145,7 @@ impl Face {
                 (self.normal - self.tangent + binormal),
             ],
             0,
-            camera_position,
-            camera_direction,
+            update_descriptor,
             &mut mesh_data,
         );
 
@@ -160,21 +156,20 @@ impl Face {
         &self,
         positions: [Vector3<f32>; 4],
         depth: u32,
-        camera_position: Vector3<f32>,
-        camera_direction: Vector3<f32>,
+        update_descriptor: &UpdateDescriptor,
         mesh_data: &mut MeshData,
     ) {
+        let camera_position = update_descriptor.controls.camera_position;
         let top_left = positions[0].normalize();
         let top_right = positions[1].normalize();
         let bottom_right = positions[2].normalize();
         let bottom_left = positions[3].normalize();
         let side_length = (top_left - top_right).magnitude();
         let middle = positions[0].lerp(positions[2], 0.5).normalize();
-        let distance = (camera_position - middle).magnitude2();
+        let distance = (camera_position - middle).magnitude();
         let area = side_length.pow(2);
         let screen_space_factor = area / distance;
-        let threshold: f32 = 0.005;
-
+        let threshold = update_descriptor.gui.lod_distance_threshold * 0.01;
         let horizon_cos = 1.0 / camera_position.magnitude();
 
         if depth > 0
@@ -193,29 +188,25 @@ impl Face {
             self.descend_node(
                 [top_left, top, middle, left],
                 depth + 1,
-                camera_position,
-                camera_direction,
+                update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [top, top_right, right, middle],
                 depth + 1,
-                camera_position,
-                camera_direction,
+                update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [middle, right, bottom_right, bottom],
                 depth + 1,
-                camera_position,
-                camera_direction,
+                update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [left, middle, bottom, bottom_left],
                 depth + 1,
-                camera_position,
-                camera_direction,
+                update_descriptor,
                 mesh_data,
             );
 
@@ -262,7 +253,7 @@ impl Entity for CubePlanet {
 
         let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
-        self.rotation = delta_rotation * self.rotation;
+        // self.rotation = delta_rotation * self.rotation;
 
         let model_mat = Matrix4::from_translation(self.translation)
             * Matrix4::from(self.rotation)
@@ -296,8 +287,16 @@ impl Entity for CubePlanet {
                 // .map(|face| face.get_mesh_data(update_descriptor.camera_position))
                 .map(|face| {
                     face.get_mesh_data(
-                        model_mat_i.transform_vector(camera_position),
-                        model_mat_i.transform_vector(camera_direction),
+                        &UpdateDescriptor {
+                            controls: ControlsUpdateDescriptor {
+                                camera_position: model_mat_i.transform_vector(camera_position),
+                                camera_direction: model_mat_i.transform_vector(camera_direction),
+                                ..update_descriptor.controls.clone()
+                            },
+                            ..update_descriptor.clone()
+                        },
+                        // model_mat_i.transform_vector(camera_position),
+                        // model_mat_i.transform_vector(camera_direction),
                     )
                 })
                 .enumerate()
