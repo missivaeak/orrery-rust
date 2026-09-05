@@ -1,7 +1,7 @@
-use bytemuck::{Pod, Zeroable};
+use bytemuck::{Pod, Zeroable, bytes_of};
 use cgmath::Matrix4;
 use wgpu::{
-    Buffer, BufferUsages, Device,
+    Buffer, BufferUsages, Device, Texture, TextureDescriptor,
     util::{BufferInitDescriptor, DeviceExt},
 };
 
@@ -17,6 +17,7 @@ pub struct Object {
     pub render_group_type: RenderGroupType,
     pub vertex_uniform_buffer: Buffer,
     pub fragment_uniform_buffer: Buffer,
+    pub texture: Texture,
     pub meshes: Vec<Mesh>,
 }
 
@@ -55,11 +56,13 @@ impl Object {
             }),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
+        let texture_buffer = device.create_texture(&TextureDescriptor { dimension });
 
         Self {
             render_group_type: options.render_group_type,
             vertex_uniform_buffer,
             fragment_uniform_buffer,
+            texture,
             meshes,
         }
     }

@@ -1,3 +1,5 @@
+use std::f32::INFINITY;
+
 use cgmath::{
     Deg, InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3,
     VectorSpace, num_traits::*,
@@ -13,7 +15,7 @@ use crate::{
     helpers::{
         constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
-        math::it_mat4,
+        math::{it_mat4, sphere_uv},
         mesh::{Mesh, MeshData},
         object::{Object, ObjectFragmentUniform, ObjectVertexUniform},
         vertex::Vertex,
@@ -226,11 +228,10 @@ impl Face {
         }
 
         for position in [top_left, top_right, bottom_right, bottom_left] {
-            let position4 = position.extend(1.0);
             mesh_data.vertices.push(Vertex {
-                position: position4.into(),
-                normal: position4.into(),
-                uv: position4.into(),
+                position: [position.x, position.y, position.z, 1.0],
+                normal: [position.x, position.y, position.z, 0.0],
+                uv: [position.x, position.y, position.z, 0.0],
                 colour: [1.0, 1.0, 1.0, 1.0],
             });
         }

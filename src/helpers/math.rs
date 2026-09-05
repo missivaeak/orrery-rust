@@ -1,6 +1,8 @@
 use std::f32::consts::TAU;
 
-use cgmath::{Angle, Deg, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective};
+use cgmath::{
+    Angle, Deg, InnerSpace, Matrix, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective,
+};
 
 use crate::helpers::constants::EARTH_RADIUS;
 
@@ -95,4 +97,16 @@ pub fn ilerp(input: Vector3<f32>, min: f32, max: f32) -> Vector3<f32> {
         y: ilerp_element(input.y, min, max),
         z: ilerp_element(input.z, min, max),
     }
+}
+
+pub fn sphere_uv(position: Vector3<f32>) -> [f32; 2] {
+    let p = position.normalize();
+
+    // Longitude around the Y axis.
+    let u = 0.5 + p.z.atan2(p.x) / TAU;
+
+    // Latitude, with V=0 at the top of the texture.
+    let v = 0.5 - p.y.clamp(-1.0, 1.0).asin() / (TAU / 2.0);
+
+    [u, v]
 }
