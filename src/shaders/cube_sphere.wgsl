@@ -27,7 +27,7 @@ struct ObjectFragmentUniform {
     colour: vec4f,
 };
 
-@binding(4) @group(0) var texture: texture_2d<f32>;
+@binding(4) @group(0) var texture: texture_cube<f32>;
 @binding(5) @group(0) var texture_sampler: sampler;
 
 struct Interpolators {
@@ -67,13 +67,13 @@ fn fs_main(
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    // Sample texture
-    let tex_colour = textureSample(texture, texture_sampler, uv);
+    // Sample cubemap using normal as direction
+    let tex_colour = textureSample(texture, texture_sampler, normal_dir);
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
-    // Combine texture color with lighting
+    // Combine cubemap color with lighting
     return vec4(tex_colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular, tex_colour.a);
 }

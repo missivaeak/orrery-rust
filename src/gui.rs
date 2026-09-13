@@ -1,9 +1,9 @@
 use cgmath::num_traits::ToPrimitive;
 use egui::{
     Align, Align2, Area, Color32, Context, CornerRadius, Frame, Layout, Margin, Pos2, Rect, Shadow,
-    Slider, Ui, ViewportId,
+    Slider, ViewportId,
 };
-use egui_extras::{Size, Strip, StripBuilder};
+use egui_extras::{Size, StripBuilder};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use egui_winit::State;
 use wgpu::{CommandEncoder, Device, Queue, StoreOp, TextureFormat, TextureView};

@@ -3,12 +3,15 @@ use wgpu::{Device, Queue};
 
 use crate::{
     helpers::{
+        asset_library::AssetLibrary,
         constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
         math::it_mat4,
         object::{Object, ObjectOptions, ObjectVertexUniform},
+        texture::TextureType,
     },
     primitives::sphere::sphere_data,
+    renderer::RenderGroupType,
 };
 
 pub struct PrettySphere {
@@ -19,14 +22,24 @@ pub struct PrettySphere {
 }
 
 impl PrettySphere {
-    pub fn new(device: &Device) -> Self {
+    pub fn new(device: &Device, asset_library: &AssetLibrary) -> Self {
         let translation = Vector3::new(EARTH_RADIUS + 1.0, 0.0, 0.0);
         let scale = Vector3::new(500.0, 500.0, 500.0);
         let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+
+        let mut options = ObjectOptions::default();
+        options.render_group_type = RenderGroupType::Lit;
+        
+        // Try to get skybox texture from asset library for cubemap rendering
+        options.texture = asset_library.get_texture("skybox");
+        options.texture_type = asset_library
+            .get_texture_type("skybox")
+            .unwrap_or(TextureType::Texture2D);
+
         let object = Object::from_mesh_datas(
             device,
             vec![sphere_data(0.1, 20, 10)],
-            ObjectOptions::default(),
+            options,
         );
         Self {
             object,

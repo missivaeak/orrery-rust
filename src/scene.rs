@@ -6,6 +6,7 @@ use crate::{
     controls::Controls,
     entities::{cube_planet::CubePlanet, pretty_sphere::PrettySphere},
     helpers::{
+        asset_library::AssetLibrary,
         entity::{Entity, UpdateDescriptor},
         math::{create_projection, create_view},
         object::{GlobalFragmentUniform, GlobalVertexUniform, Object},
@@ -34,7 +35,12 @@ impl Default for SceneUpdateDescriptor {
 }
 
 impl Scene {
-    pub fn new(device: &Device, controls: &Controls, size: LogicalSize<f32>) -> Self {
+    pub fn new(
+        device: &Device,
+        controls: &Controls,
+        size: LogicalSize<f32>,
+        asset_library: &AssetLibrary,
+    ) -> Self {
         let view_mat = create_view(controls.camera_position, controls.camera_direction);
         let projection_mat = create_projection(size.width / size.height, true);
         let mut entities: Vec<Box<dyn Entity>> = Vec::new();
@@ -59,8 +65,8 @@ impl Scene {
             specular_gloss: 30.0,
         };
 
-        entities.push(Box::new(CubePlanet::new(device)));
-        entities.push(Box::new(PrettySphere::new(device)));
+        entities.push(Box::new(CubePlanet::new(device, asset_library)));
+        entities.push(Box::new(PrettySphere::new(device, asset_library)));
 
         Self {
             global_vertex_uniform,

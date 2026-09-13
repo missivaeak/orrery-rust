@@ -1,6 +1,6 @@
 use cgmath::{
-    Deg, InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3,
-    VectorSpace, num_traits::*,
+    InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3, VectorSpace,
+    num_traits::*,
 };
 
 use wgpu::{
@@ -11,6 +11,7 @@ use wgpu::{
 use crate::{
     controls::ControlsUpdateDescriptor,
     helpers::{
+        asset_library::AssetLibrary,
         constants::EARTH_RADIUS,
         entity::{Entity, UpdateDescriptor},
         math::it_mat4,
@@ -30,7 +31,7 @@ pub struct CubePlanet {
 }
 
 impl CubePlanet {
-    pub fn new(device: &Device) -> Self {
+    pub fn new(device: &Device, asset_library: &AssetLibrary) -> Self {
         let translation = Vector3::new(0.0, 0.0, 0.0);
         let scale = Vector3::new(1.0, 1.0, 1.0) * EARTH_RADIUS;
         let axis = Vector3::new(1.0, -1.0, 0.0).normalize();
@@ -92,11 +93,19 @@ impl CubePlanet {
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
+        // Get texture from asset library
+        let texture = asset_library.get_texture("earth_diffuse");
+        // let texture_type = asset_library
+        //     .get_texture_type("earth_diffuse")
+        //     .unwrap_or(TextureType::Texture2D);
+
         let object = Object {
             render_group_type: RenderGroupType::Lit,
             vertex_uniform_buffer,
             fragment_uniform_buffer,
             meshes,
+            texture,
+            // texture_type,
         };
 
         Self {
@@ -226,11 +235,10 @@ impl Face {
         }
 
         for position in [top_left, top_right, bottom_right, bottom_left] {
-            let position4 = position.extend(1.0);
             mesh_data.vertices.push(Vertex {
-                position: position4.into(),
-                normal: position4.into(),
-                uv: position4.into(),
+                position: [position.x, position.y, position.z, 1.0],
+                normal: [position.x, position.y, position.z, 0.0],
+                uv: [position.x, position.y, position.z, 0.0],
                 colour: [1.0, 1.0, 1.0, 1.0],
             });
         }
@@ -246,12 +254,12 @@ impl Face {
 
 impl Entity for CubePlanet {
     fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
-        let dt = update_descriptor.app.delta_time.as_secs_f32();
+        // let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
-        let speed = 10.0;
+        // let speed = 10.0;
 
-        let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
+        // let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
         // self.rotation = delta_rotation * self.rotation;
 
@@ -351,84 +359,3 @@ fn map_cube_to_sphere(cube_point: Vector3<f32>) -> Vector3<f32> {
 
     sphere_cube
 }
-
-// pub fn create_cubesphere_meshes(device: &Device, resolution: usize) -> Vec<Mesh> {
-//     vec![
-//         // Ups
-//         create_face(device, Vector3::unit_x(), resolution + 1),
-//         create_face(device, Vector3::unit_y(), resolution + 1),
-//         create_face(device, Vector3::unit_z(), resolution + 1),
-//         // Downs
-//         create_face(device, Vector3::unit_x().mul(-1.0), resolution + 1),
-//         create_face(device, Vector3::unit_y().mul(-1.0), resolution + 1),
-//         create_face(device, Vector3::unit_z().mul(-1.0), resolution + 1),
-//     ]
-// }
-//
-// fn create_face(device: &Device, normal: Vector3<f32>, resolution: usize) -> Mesh {
-//     let axis_a: Vector3<f32> = normal.yzx();
-//     let axis_b = normal.cross(axis_a);
-//     let mut vertices: Vec<Vertex> = Vec::with_capacity(resolution * resolution);
-//     let mut indices: Vec<u16> = Vec::with_capacity((resolution - 1) * (resolution - 1) * 6);
-//
-//     if let Some(res_f32) = resolution.to_f32() {
-//         for y in 0..resolution {
-//             if let Some(y_f32) = y.to_f32() {
-//                 for x in 0..resolution {
-//                     if let Some(x_f32) = x.to_f32() {
-//                         let vertex_index: u16 = (x + y * resolution) as u16;
-//                         let offset: Vector2<f32> = Vector2::new(x_f32, y_f32).div(res_f32 - 1.0);
-//                         let point: Vector3<f32> = map_cube_to_sphere(
-//                             normal
-//                                 .add(axis_a.mul(2.0 * offset.x - 1.0))
-//                                 .add(axis_b.mul(2.0 * offset.y - 1.0)),
-//                         );
-//                         let vertex = Vertex::new(
-//                             point,
-//                             point,
-//                             offset,
-//                             normal.xyz().add_element_wise(1.0).div(2.0).extend(1.0),
-//                         );
-//                         vertices.push(vertex);
-//
-//                         if x != resolution - 1 && y != resolution - 1 {
-//                             indices.push(vertex_index);
-//                             indices.push(vertex_index + resolution as u16 + 1);
-//                             indices.push(vertex_index + resolution as u16);
-//                             indices.push(vertex_index);
-//                             indices.push(vertex_index + 1);
-//                             indices.push(vertex_index + resolution as u16 + 1);
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-//         label: Some("Vertex Buffer"),
-//         contents: bytemuck::cast_slice(&vertices),
-//         usage: BufferUsages::VERTEX,
-//     });
-//     let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-//         label: Some("Vertex Buffer"),
-//         contents: bytemuck::cast_slice(&indices),
-//         usage: BufferUsages::INDEX,
-//     });
-//
-//     Mesh {
-//         vertex_buffer,
-//         index_buffer,
-//         index_length: indices.len() as u32,
-//     }
-// }
-//
-// fn map_cube_to_sphere(cube_point: Vector3<f32>) -> Vector3<f32> {
-//     let x_square = cube_point.x * cube_point.x;
-//     let y_square = cube_point.y * cube_point.y;
-//     let z_square = cube_point.z * cube_point.z;
-//     let x = cube_point.x * (1.0 - (y_square + z_square) / 2.0 + (y_square * z_square) / 3.0).sqrt();
-//     let y = cube_point.y * (1.0 - (z_square + x_square) / 2.0 + (z_square * x_square) / 3.0).sqrt();
-//     let z = cube_point.z * (1.0 - (y_square + x_square) / 2.0 + (y_square * x_square) / 3.0).sqrt();
-//
-//     Vector3::new(x, y, z)
-// }

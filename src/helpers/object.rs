@@ -1,7 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::Matrix4;
+use std::sync::Arc;
 use wgpu::{
-    Buffer, BufferUsages, Device,
+    Buffer, BufferUsages, Device, Texture,
     util::{BufferInitDescriptor, DeviceExt},
 };
 
@@ -9,6 +10,7 @@ use crate::{
     helpers::{
         math::{create_model, it_mat4},
         mesh::{Mesh, MeshData, get_mesh},
+        texture::TextureType,
     },
     renderer::RenderGroupType,
 };
@@ -17,12 +19,16 @@ pub struct Object {
     pub render_group_type: RenderGroupType,
     pub vertex_uniform_buffer: Buffer,
     pub fragment_uniform_buffer: Buffer,
+    pub texture: Option<Arc<Texture>>,
+    // pub texture_type: TextureType,
     pub meshes: Vec<Mesh>,
 }
 
 pub struct ObjectOptions {
     pub model_mat: Matrix4<f32>,
     pub render_group_type: RenderGroupType,
+    pub texture: Option<Arc<Texture>>,
+    pub texture_type: TextureType,
 }
 
 impl Default for ObjectOptions {
@@ -34,6 +40,8 @@ impl Default for ObjectOptions {
                 (1.0, 1.0, 1.0).into(),
             ),
             render_group_type: RenderGroupType::Lit,
+            texture: None,
+            texture_type: TextureType::Texture2D,
         }
     }
 }
@@ -60,6 +68,8 @@ impl Object {
             render_group_type: options.render_group_type,
             vertex_uniform_buffer,
             fragment_uniform_buffer,
+            texture: options.texture,
+            // texture_type: options.texture_type,
             meshes,
         }
     }

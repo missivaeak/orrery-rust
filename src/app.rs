@@ -15,7 +15,7 @@ use winit::{
 use crate::{
     controls::{Controls, InputEventResult},
     gui::Gui,
-    helpers::{constants::ASPECT_RATIO, entity::UpdateDescriptor},
+    helpers::{asset_library::AssetLibrary, constants::ASPECT_RATIO, entity::UpdateDescriptor},
     renderer::Renderer,
     scene::Scene,
 };
@@ -102,10 +102,14 @@ impl ApplicationHandler for App {
         ));
         println!("WGPU initialised");
 
+        let asset_library = AssetLibrary::new(&renderer.device, &renderer.queue)
+            .expect("Failed to initialize asset library");
+        println!("Asset library initialised");
+
         let controls = Controls::new();
         println!("Controls initialised");
 
-        let scene = Scene::new(&renderer.device, &controls, size);
+        let scene = Scene::new(&renderer.device, &controls, size, &asset_library);
         println!("Scene initialised");
 
         let gui = Gui::new(
