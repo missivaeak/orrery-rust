@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use wgpu::{Device, Queue, Texture};
 
-use crate::helpers::texture::{TextureConfig, TextureType, load_texture_2d};
+use crate::helpers::texture::{TextureConfig, TextureType, load_texture_2d, load_texture_cubemap};
 
 pub struct AssetLibrary {
     textures_2d: HashMap<String, Arc<Texture>>,
@@ -13,14 +13,14 @@ pub struct AssetLibrary {
 impl AssetLibrary {
     pub fn new(device: &Device, queue: &Queue) -> Result<Self, String> {
         let mut textures_2d = HashMap::new();
-        let textures_cubemap = HashMap::new();
+        let mut textures_cubemap = HashMap::new();
         let mut texture_types = HashMap::new();
 
         // Load all 2D textures
         let earth_diffuse = load_texture_2d(
             device,
             queue,
-            include_bytes!("../assets/happy-tree.png"),
+            include_bytes!("../assets/earth/side_0.jpg"),
             TextureConfig::default(),
         )?;
         textures_2d.insert("earth_diffuse".to_string(), Arc::new(earth_diffuse));
@@ -28,24 +28,24 @@ impl AssetLibrary {
 
         // Load all cubemaps (placeholder - you'll need actual cubemap images)
         // For now, we'll skip cubemap loading until you have the images
-        // let skybox = load_texture_cubemap(
-        //     device,
-        //     queue,
-        //     [
-        //         include_bytes!("../../assets/skybox_right.png"),
-        //         include_bytes!("../../assets/skybox_left.png"),
-        //         include_bytes!("../../assets/skybox_top.png"),
-        //         include_bytes!("../../assets/skybox_bottom.png"),
-        //         include_bytes!("../../assets/skybox_front.png"),
-        //         include_bytes!("../../assets/skybox_back.png"),
-        //     ],
-        //     TextureConfig {
-        //         texture_type: TextureType::TextureCube,
-        //         ..Default::default()
-        //     },
-        // )?;
-        // textures_cubemap.insert("skybox".to_string(), Arc::new(skybox));
-        // texture_types.insert("skybox".to_string(), TextureType::TextureCube);
+        let skybox = load_texture_cubemap(
+            device,
+            queue,
+            [
+                include_bytes!("../assets/earth/side_0.jpg"),
+                include_bytes!("../assets/earth/side_1.jpg"),
+                include_bytes!("../assets/earth/side_2.jpg"),
+                include_bytes!("../assets/earth/side_3.jpg"),
+                include_bytes!("../assets/earth/side_4.jpg"),
+                include_bytes!("../assets/earth/side_5.jpg"),
+            ],
+            TextureConfig {
+                texture_type: TextureType::TextureCube,
+                ..Default::default()
+            },
+        )?;
+        textures_cubemap.insert("earth_height".to_string(), Arc::new(skybox));
+        texture_types.insert("earth_height".to_string(), TextureType::TextureCube);
 
         Ok(Self {
             textures_2d,

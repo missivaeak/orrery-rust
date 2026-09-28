@@ -289,9 +289,14 @@ impl Renderer {
                 if let Some(objects) = object_map.get(&render_group_type) {
                     for object in objects.iter() {
                         let texture_view = if let Some(texture) = &object.texture {
-                            texture.create_view(&TextureViewDescriptor::default())
+                            texture.create_view(&TextureViewDescriptor {
+                                // dimension: Some(TextureViewDimension::D2Array),
+                                // array_layer_count: Some(6),
+                                ..Default::default()
+                            })
                         } else {
-                            self.fallback_texture.create_view(&TextureViewDescriptor::default())
+                            self.fallback_texture
+                                .create_view(&TextureViewDescriptor::default())
                         };
 
                         let uniform_bind_group =
@@ -312,9 +317,7 @@ impl Renderer {
                                     },
                                     BindGroupEntry {
                                         binding: 2,
-                                        resource: object
-                                            .vertex_uniform_buffer
-                                            .as_entire_binding(),
+                                        resource: object.vertex_uniform_buffer.as_entire_binding(),
                                     },
                                     BindGroupEntry {
                                         binding: 3,
@@ -593,10 +596,7 @@ fn get_unlit_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
     }
 }
 
-fn get_2d_texture_render_group(
-    device: &Device,
-    config: &SurfaceConfiguration,
-) -> RenderGroup {
+fn get_2d_texture_render_group(device: &Device, config: &SurfaceConfiguration) -> RenderGroup {
     let source = ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/lit.wgsl")));
     let shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
@@ -733,10 +733,7 @@ fn get_2d_texture_render_group(
     }
 }
 
-fn get_cubemap_render_group(
-    device: &Device,
-    config: &SurfaceConfiguration,
-) -> RenderGroup {
+fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> RenderGroup {
     let source = ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/cube_sphere.wgsl")));
     let shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
