@@ -126,9 +126,20 @@ struct Face {
 
 impl Face {
     pub fn new(normal: Vector3<f32>) -> Self {
+        let tangent = if normal.x.abs() > 0.9 {
+            // ±X faces: tangent points forward (Y)
+            Vector3::new(0.0, 1.0, 0.0) * normal.x.signum()
+        } else if normal.y.abs() > 0.9 {
+            // ±Y faces: tangent points right (X)
+            Vector3::new(-1.0, 0.0, 0.0) * normal.y.signum()
+        } else {
+            // ±Z faces: tangent points right (X)
+            Vector3::new(1.0, 0.0, 0.0)
+        };
+
         Self {
             normal,
-            tangent: normal.yzx(),
+            tangent,
             max_depth: 15,
             min_depth: 2,
         }
