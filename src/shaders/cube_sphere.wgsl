@@ -27,15 +27,16 @@ struct ObjectFragmentUniform {
     colour: vec4f,
 };
 
-@binding(4) @group(0) var texture: texture_2d_array<f32>;
+@binding(4) @group(0) var texture: texture_cube<f32>;
 @binding(5) @group(0) var texture_sampler: sampler;
 
 struct Interpolators {
     @builtin(position) c_position: vec4f,
     @location(0) w_position: vec3f,
     @location(1) w_normal: vec3f,
-    @location(2) uv: vec2f,
-    @location(3) colour: vec4f,
+    @location(2) o_normal: vec3f,
+    @location(3) uv: vec2f,
+    @location(4) colour: vec4f,
 }
 
 @vertex
@@ -50,6 +51,7 @@ fn vs_main(
     out.w_normal = (OVU.normal_mat * o_normal).xyz;
     out.w_position = (OVU.model_mat * o_position).xyz;
     out.c_position = mvp * o_position;
+    out.o_normal = o_normal.xyz;
     out.uv = uv;
     out.colour = colour;
     return out;
@@ -59,8 +61,9 @@ fn vs_main(
 fn fs_main(
     @location(0) w_position: vec3f,
     @location(1) w_normal: vec3f,
-    @location(2) uv: vec2f,
-    @location(3) colour: vec4f
+    @location(2) o_normal: vec3f,
+    @location(3) uv: vec2f,
+    @location(4) colour: vec4f,
 ) -> @location(0) vec4f {
     let normal_dir = normalize(w_normal);
     let light_dir = normalize(GFU.light_position.xyz - w_position);
@@ -68,7 +71,7 @@ fn fs_main(
     let half_dir = normalize(view_dir + light_dir);
 
     // Sample cubemap using normal as direction
-    let tex_colour = textureSample(texture, texture_sampler, uv, 0);
+    let tex_colour = textureSample(texture, texture_sampler, normalize(o_normal));
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);

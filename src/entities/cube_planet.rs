@@ -1,6 +1,6 @@
 use cgmath::{
-    InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3, VectorSpace,
-    num_traits::*,
+    Deg, InnerSpace, Matrix4, Quaternion, Rad, Rotation3, SquareMatrix, Transform, Vector3,
+    VectorSpace, num_traits::*,
 };
 
 use wgpu::{
@@ -35,8 +35,9 @@ impl CubePlanet {
         let translation = Vector3::new(0.0, 0.0, 0.0);
         let scale = Vector3::new(1.0, 1.0, 1.0) * EARTH_RADIUS;
         let axis = Vector3::new(1.0, -1.0, 0.0).normalize();
-        let angle = Rad((1.0 / 3.0.sqrt()).acos());
-        let rotation = Quaternion::from_axis_angle(axis, angle);
+        let rotation = Quaternion::one();
+        // let angle = Rad((1.0 / 3.0.sqrt()).acos());
+        // let rotation = Quaternion::from_axis_angle(axis, angle);
 
         let faces = vec![
             Face::new(Vector3::unit_x()),
@@ -249,14 +250,14 @@ impl Face {
 
 impl Entity for CubePlanet {
     fn update(&mut self, queue: &Queue, update_descriptor: &UpdateDescriptor) -> Result<(), ()> {
-        // let dt = update_descriptor.app.delta_time.as_secs_f32();
+        let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
-        // let speed = 10.0;
+        let speed = 10.0;
 
-        // let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
+        let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
-        // self.rotation = delta_rotation * self.rotation;
+        self.rotation = delta_rotation * self.rotation;
 
         let model_mat = Matrix4::from_translation(self.translation)
             * Matrix4::from(self.rotation)

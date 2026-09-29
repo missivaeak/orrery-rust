@@ -71,8 +71,8 @@ impl Gui {
             frame_started: false,
             average_frame_ms: None,
             rects: Vec::with_capacity(10),
-            wireframe_enabled: true,
-            lod_probe_enabled: true,
+            wireframe_enabled: false,
+            lod_probe_enabled: false,
             lod_distance_threshold: 1.0,
         }
     }

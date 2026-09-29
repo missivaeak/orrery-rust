@@ -31,12 +31,12 @@ impl AssetLibrary {
             device,
             queue,
             [
-                include_bytes!("../assets/earth/side_0.jpg"),
-                include_bytes!("../assets/earth/side_1.jpg"),
-                include_bytes!("../assets/earth/side_2.jpg"),
-                include_bytes!("../assets/earth/side_3.jpg"),
-                include_bytes!("../assets/earth/side_4.jpg"),
-                include_bytes!("../assets/earth/side_5.jpg"),
+                include_bytes!("../assets/earth/side_0.jpg"), // east-east Pacific
+                include_bytes!("../assets/earth/side_1.jpg"), // west Africa
+                include_bytes!("../assets/earth/side_2.jpg"), // east Asia
+                include_bytes!("../assets/earth/side_3.jpg"), // west west Americas
+                include_bytes!("../assets/earth/side_4.jpg"), // north Arctic
+                include_bytes!("../assets/earth/side_5.jpg"), // south Antarctic
             ],
             TextureConfig {
                 texture_type: TextureType::Cube,

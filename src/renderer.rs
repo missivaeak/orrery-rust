@@ -290,8 +290,7 @@ impl Renderer {
                     for object in objects.iter() {
                         let texture_view = if let Some(texture) = &object.texture {
                             texture.create_view(&TextureViewDescriptor {
-                                // dimension: Some(TextureViewDimension::D2Array),
-                                // array_layer_count: Some(6),
+                                dimension: Some(TextureViewDimension::Cube),
                                 ..Default::default()
                             })
                         } else {
@@ -801,7 +800,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
                 visibility: ShaderStages::FRAGMENT,
                 ty: BindingType::Texture {
                     sample_type: TextureSampleType::Float { filterable: true },
-                    view_dimension: TextureViewDimension::D2Array,
+                    view_dimension: TextureViewDimension::Cube,
                     multisampled: false,
                 },
                 count: None,
