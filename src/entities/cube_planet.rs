@@ -93,19 +93,14 @@ impl CubePlanet {
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
-        // Get texture from asset library
-        let texture = asset_library.get_texture("earth_diffuse");
-        // let texture_type = asset_library
-        //     .get_texture_type("earth_diffuse")
-        //     .unwrap_or(TextureType::Texture2D);
+        let texture = asset_library.get_texture("earth_height");
 
         let object = Object {
-            render_group_type: RenderGroupType::Lit,
+            render_group_type: RenderGroupType::CubeSphere,
             vertex_uniform_buffer,
             fragment_uniform_buffer,
             meshes,
             texture,
-            // texture_type,
         };
 
         Self {

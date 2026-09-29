@@ -20,7 +20,6 @@ pub struct Object {
     pub vertex_uniform_buffer: Buffer,
     pub fragment_uniform_buffer: Buffer,
     pub texture: Option<Arc<Texture>>,
-    // pub texture_type: TextureType,
     pub meshes: Vec<Mesh>,
 }
 
@@ -28,7 +27,6 @@ pub struct ObjectOptions {
     pub model_mat: Matrix4<f32>,
     pub render_group_type: RenderGroupType,
     pub texture: Option<Arc<Texture>>,
-    pub texture_type: TextureType,
 }
 
 impl Default for ObjectOptions {
@@ -41,7 +39,6 @@ impl Default for ObjectOptions {
             ),
             render_group_type: RenderGroupType::Lit,
             texture: None,
-            texture_type: TextureType::Texture2D,
         }
     }
 }
@@ -69,7 +66,6 @@ impl Object {
             vertex_uniform_buffer,
             fragment_uniform_buffer,
             texture: options.texture,
-            // texture_type: options.texture_type,
             meshes,
         }
     }

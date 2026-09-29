@@ -7,7 +7,6 @@ use crate::helpers::texture::{TextureConfig, TextureType, load_texture_2d, load_
 pub struct AssetLibrary {
     textures_2d: HashMap<String, Arc<Texture>>,
     textures_cubemap: HashMap<String, Arc<Texture>>,
-    texture_types: HashMap<String, TextureType>,
 }
 
 impl AssetLibrary {
@@ -24,7 +23,7 @@ impl AssetLibrary {
             TextureConfig::default(),
         )?;
         textures_2d.insert("earth_diffuse".to_string(), Arc::new(earth_diffuse));
-        texture_types.insert("earth_diffuse".to_string(), TextureType::Texture2D);
+        texture_types.insert("earth_diffuse".to_string(), TextureType::D2);
 
         // Load all cubemaps (placeholder - you'll need actual cubemap images)
         // For now, we'll skip cubemap loading until you have the images
@@ -40,17 +39,16 @@ impl AssetLibrary {
                 include_bytes!("../assets/earth/side_5.jpg"),
             ],
             TextureConfig {
-                texture_type: TextureType::TextureCube,
+                texture_type: TextureType::Cube,
                 ..Default::default()
             },
         )?;
         textures_cubemap.insert("earth_height".to_string(), Arc::new(skybox));
-        texture_types.insert("earth_height".to_string(), TextureType::TextureCube);
+        texture_types.insert("earth_height".to_string(), TextureType::Cube);
 
         Ok(Self {
             textures_2d,
             textures_cubemap,
-            texture_types,
         })
     }
 
@@ -61,11 +59,7 @@ impl AssetLibrary {
             .cloned()
     }
 
-    pub fn get_texture_type(&self, key: &str) -> Option<TextureType> {
-        self.texture_types.get(key).copied()
+    pub fn texture_exists(&self, key: &str) -> bool {
+        self.textures_2d.contains_key(key) || self.textures_cubemap.contains_key(key)
     }
-
-    // pub fn texture_exists(&self, key: &str) -> bool {
-    //     self.textures_2d.contains_key(key) || self.textures_cubemap.contains_key(key)
-    // }
 }

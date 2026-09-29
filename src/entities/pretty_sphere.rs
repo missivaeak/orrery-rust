@@ -8,7 +8,6 @@ use crate::{
         entity::{Entity, UpdateDescriptor},
         math::it_mat4,
         object::{Object, ObjectOptions, ObjectVertexUniform},
-        texture::TextureType,
     },
     primitives::sphere::sphere_data,
     renderer::RenderGroupType,
@@ -29,18 +28,11 @@ impl PrettySphere {
 
         let mut options = ObjectOptions::default();
         options.render_group_type = RenderGroupType::Lit;
-        
+
         // Try to get skybox texture from asset library for cubemap rendering
         options.texture = asset_library.get_texture("skybox");
-        options.texture_type = asset_library
-            .get_texture_type("skybox")
-            .unwrap_or(TextureType::Texture2D);
 
-        let object = Object::from_mesh_datas(
-            device,
-            vec![sphere_data(0.1, 20, 10)],
-            options,
-        );
+        let object = Object::from_mesh_datas(device, vec![sphere_data(0.1, 20, 10)], options);
         Self {
             object,
             translation,

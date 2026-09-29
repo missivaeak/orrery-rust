@@ -5,13 +5,10 @@ use wgpu::{
     TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
 };
 
-/// Texture type describing how the texture is used in the shader
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextureType {
-    /// 2D texture (standard diffuse, normal map, etc.)
-    Texture2D,
-    /// Cubemap texture (6 faces)
-    TextureCube,
+    D2,
+    Cube,
 }
 
 /// Configuration for creating a texture
@@ -24,7 +21,7 @@ pub struct TextureConfig {
 impl Default for TextureConfig {
     fn default() -> Self {
         Self {
-            texture_type: TextureType::Texture2D,
+            texture_type: TextureType::D2,
             format: TextureFormat::Rgba8UnormSrgb,
             label: Some("texture"),
         }
@@ -38,7 +35,7 @@ pub fn load_texture_2d(
     bytes: &[u8],
     config: TextureConfig,
 ) -> Result<Texture, String> {
-    if config.texture_type != TextureType::Texture2D {
+    if config.texture_type != TextureType::D2 {
         return Err("TextureConfig must be Texture2D for this function".to_string());
     }
 
@@ -94,7 +91,7 @@ pub fn load_texture_cubemap(
     bytes_array: [&[u8]; 6],
     config: TextureConfig,
 ) -> Result<Texture, String> {
-    if config.texture_type != TextureType::TextureCube {
+    if config.texture_type != TextureType::Cube {
         return Err("TextureConfig must be TextureCube for this function".to_string());
     }
 

@@ -38,7 +38,7 @@ pub enum RenderGroupType {
 }
 
 impl RenderGroupType {
-    const VALUES: [Self; 2] = [Self::Lit, Self::Unlit];
+    const VALUES: [Self; 3] = [Self::Lit, Self::Unlit, Self::CubeSphere];
 }
 
 struct RenderGroup {
@@ -801,7 +801,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
                 visibility: ShaderStages::FRAGMENT,
                 ty: BindingType::Texture {
                     sample_type: TextureSampleType::Float { filterable: true },
-                    view_dimension: TextureViewDimension::Cube,
+                    view_dimension: TextureViewDimension::D2Array,
                     multisampled: false,
                 },
                 count: None,

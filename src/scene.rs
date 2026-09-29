@@ -66,7 +66,7 @@ impl Scene {
         };
 
         entities.push(Box::new(CubePlanet::new(device, asset_library)));
-        entities.push(Box::new(PrettySphere::new(device, asset_library)));
+        // entities.push(Box::new(PrettySphere::new(device, asset_library)));
 
         Self {
             global_vertex_uniform,
