@@ -328,7 +328,7 @@ impl Entity for CubePlanet {
         let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
-        let speed = 0.0;
+        let speed = 30.0;
 
         let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
