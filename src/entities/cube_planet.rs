@@ -135,7 +135,7 @@ impl Face {
             Vector3::new(0.0, 0.0, 1.0) * normal.y.signum()
         } else {
             // ±Z faces: tangent points right (X)
-            Vector3::new(1.0, 0.0, 0.0)
+            Vector3::new(1.0, 0.0, 0.0) * normal.z.signum()
         };
 
         Self {
