@@ -39,9 +39,11 @@ pub fn load_texture_2d(
         return Err("TextureConfig must be Texture2D for this function".to_string());
     }
 
-    let image = ImageReader::new(Cursor::new(bytes))
+    let mut image_reader = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
-        .map_err(|e| format!("Failed to guess format: {}", e))?
+        .map_err(|e| format!("Failed to guess format: {}", e))?;
+    image_reader.no_limits();
+    let image = image_reader
         .decode()
         .map_err(|e| format!("Failed to decode image: {}", e))?;
 
@@ -100,9 +102,11 @@ pub fn load_texture_cubemap(
 
     // Load all 6 images
     for (i, bytes) in bytes_array.iter().enumerate() {
-        let image = ImageReader::new(Cursor::new(bytes))
+        let mut image_reader = ImageReader::new(Cursor::new(bytes))
             .with_guessed_format()
-            .map_err(|e| format!("Failed to guess format: {}", e))?
+            .map_err(|e| format!("Failed to guess format: {}", e))?;
+        image_reader.no_limits();
+        let image = image_reader
             .decode()
             .map_err(|e| format!("Failed to decode image {}: {}", i, e))?;
 

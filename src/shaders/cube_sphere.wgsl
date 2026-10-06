@@ -47,6 +47,7 @@ fn vs_main(
     @location(3) colour: vec4f
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
+
     var out: Interpolators;
     out.w_normal = (OVU.normal_mat * o_normal).xyz;
     out.w_position = (OVU.model_mat * o_position).xyz;
@@ -70,8 +71,7 @@ fn fs_main(
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    // Sample cubemap using normal as direction
-    let tex_colour = textureSample(texture, texture_sampler, normalize(o_normal));
+    let tex_colour = textureSample(texture, texture_sampler, vec3f(o_normal.x, o_normal.z, -o_normal.y));
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);

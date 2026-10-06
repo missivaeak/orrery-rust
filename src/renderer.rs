@@ -660,7 +660,7 @@ fn get_2d_texture_render_group(device: &Device, config: &SurfaceConfiguration) -
             },
             BindGroupLayoutEntry {
                 binding: 4,
-                visibility: ShaderStages::FRAGMENT,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
                 ty: BindingType::Texture {
                     sample_type: TextureSampleType::Float { filterable: true },
                     view_dimension: TextureViewDimension::D2,
@@ -670,7 +670,7 @@ fn get_2d_texture_render_group(device: &Device, config: &SurfaceConfiguration) -
             },
             BindGroupLayoutEntry {
                 binding: 5,
-                visibility: ShaderStages::FRAGMENT,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
                 ty: BindingType::Sampler(SamplerBindingType::Filtering),
                 count: None,
             },
@@ -797,7 +797,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
             },
             BindGroupLayoutEntry {
                 binding: 4,
-                visibility: ShaderStages::FRAGMENT,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
                 ty: BindingType::Texture {
                     sample_type: TextureSampleType::Float { filterable: true },
                     view_dimension: TextureViewDimension::Cube,
@@ -807,7 +807,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
             },
             BindGroupLayoutEntry {
                 binding: 5,
-                visibility: ShaderStages::FRAGMENT,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
                 ty: BindingType::Sampler(SamplerBindingType::Filtering),
                 count: None,
             },

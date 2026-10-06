@@ -128,10 +128,10 @@ impl Face {
     pub fn new(normal: Vector3<f32>) -> Self {
         let tangent = if normal.x.abs() > 0.9 {
             // ±X faces: tangent points forward (Y)
-            Vector3::new(0.0, 1.0, 0.0) * normal.x.signum()
+            Vector3::new(0.0, 0.0, 1.0) * normal.x.signum()
         } else if normal.y.abs() > 0.9 {
             // ±Y faces: tangent points right (X)
-            Vector3::new(-1.0, 0.0, 0.0) * normal.y.signum()
+            Vector3::new(0.0, 0.0, 1.0) * normal.y.signum()
         } else {
             // ±Z faces: tangent points right (X)
             Vector3::new(1.0, 0.0, 0.0)
@@ -264,7 +264,7 @@ impl Entity for CubePlanet {
         let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
-        let speed = 10.0;
+        let speed = 0.0;
 
         let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
