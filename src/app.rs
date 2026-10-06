@@ -65,19 +65,10 @@ pub struct App {
 }
 
 #[allow(unused, dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct AppUpdateDescriptor {
     pub total_time: Duration,
     pub delta_time: Duration,
-}
-
-impl Default for AppUpdateDescriptor {
-    fn default() -> Self {
-        Self {
-            total_time: Duration::default(),
-            delta_time: Duration::default(),
-        }
-    }
 }
 
 impl ApplicationHandler for App {

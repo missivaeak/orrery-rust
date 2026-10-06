@@ -25,14 +25,13 @@ impl PrettySphere {
         let translation = Vector3::new(EARTH_RADIUS + 1.0, 0.0, 0.0);
         let scale = Vector3::new(500.0, 500.0, 500.0);
         let rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
-
-        let mut options = ObjectOptions::default();
-        options.render_group_type = RenderGroupType::Lit;
-
-        // Try to get skybox texture from asset library for cubemap rendering
-        options.texture = asset_library.get_texture("skybox");
-
+        let options = ObjectOptions {
+            render_group_type: RenderGroupType::Lit,
+            texture: asset_library.get_texture("skybox"),
+            ..Default::default()
+        };
         let object = Object::from_mesh_datas(device, vec![sphere_data(0.1, 20, 10)], options);
+
         Self {
             object,
             translation,
