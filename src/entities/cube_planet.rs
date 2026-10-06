@@ -241,11 +241,75 @@ impl Face {
             mesh_data.indices.reserve(mesh_data.indices.capacity() * 4);
         }
 
-        for position in [top_left, top_right, bottom_right, bottom_left] {
+        // Use the normalized sphere positions for normal and for computing cube-face UVs
+        let sphere_positions = [top_left, top_right, bottom_right, bottom_left];
+
+        for (i, &sphere_pos) in sphere_positions.iter().enumerate() {
+            // Compute cube face mapping (same logic as the cube-sphere shader)
+            let abs_x = sphere_pos.x.abs();
+            let abs_y = sphere_pos.y.abs();
+            let abs_z = sphere_pos.z.abs();
+
+            // Determine dominant axis -> face index (0:+X, 1:-X, 2:+Y, 3:-Y, 4:+Z, 5:-Z)
+            let face_index = if abs_x >= abs_y && abs_x >= abs_z {
+                // X-major
+                if sphere_pos.x < 0.0 { 1 } else { 0 }
+            } else if abs_y >= abs_x && abs_y >= abs_z {
+                // Y-major
+                if sphere_pos.y < 0.0 { 3 } else { 2 }
+            } else {
+                // Z-major
+                if sphere_pos.z < 0.0 { 5 } else { 4 }
+            };
+
+            // Compute 2D coordinates on the face before normalization
+            let mut face_u = 0.0f32;
+            let mut face_v = 0.0f32;
+
+            match face_index {
+                0 => {
+                    // +X
+                    face_u = sphere_pos.z;
+                    face_v = sphere_pos.y;
+                }
+                1 => {
+                    // -X
+                    face_u = -sphere_pos.z;
+                    face_v = sphere_pos.y;
+                }
+                2 => {
+                    // +Y
+                    face_u = sphere_pos.x;
+                    face_v = sphere_pos.z;
+                }
+                3 => {
+                    // -Y
+                    face_u = sphere_pos.x;
+                    face_v = -sphere_pos.z;
+                }
+                4 => {
+                    // +Z
+                    face_u = sphere_pos.x;
+                    face_v = sphere_pos.y;
+                }
+                5 => {
+                    // -Z
+                    face_u = -sphere_pos.x;
+                    face_v = sphere_pos.y;
+                }
+                _ => {}
+            }
+
+            // Normalize to [0,1] same as shader: divide by max component then *0.5 + 0.5
+            let max_comp = abs_x.max(abs_y).max(abs_z).max(1e-6);
+            let u = face_u / max_comp * 0.5 + 0.5;
+            let v = face_v / max_comp * 0.5 + 0.5;
+
             mesh_data.vertices.push(Vertex {
-                position: [position.x, position.y, position.z, 1.0],
-                normal: [position.x, position.y, position.z, 0.0],
-                uv: [position.x, position.y, position.z, 0.0],
+                position: [sphere_pos.x, sphere_pos.y, sphere_pos.z, 1.0],
+                normal: [sphere_pos.x, sphere_pos.y, sphere_pos.z, 0.0],
+                // Pack UV.xy = face UV in [0,1], UV.z = layer index as float
+                uv: [u, v, face_index as f32, 0.0],
                 colour: [1.0, 1.0, 1.0, 1.0],
             });
         }
