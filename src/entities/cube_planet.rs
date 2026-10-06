@@ -51,11 +51,12 @@ impl CubePlanet {
 
         let meshes: Vec<Mesh> = faces
             .iter()
-            .map(|face| {
+            .enumerate()
+            .map(|(i, face)| {
                 let MeshData {
                     vertices: _vertices,
                     indices,
-                } = face.get_mesh_data(&UpdateDescriptor::default());
+                } = face.get_mesh_data(i as u32, &UpdateDescriptor::default());
                 let vertex_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
                     size: 14272000,
@@ -145,7 +146,19 @@ impl Face {
         }
     }
 
-    fn get_mesh_data(&self, update_descriptor: &UpdateDescriptor) -> MeshData {
+    fn face_uv(&self, point: Vector3<f32>) -> [f32; 2] {
+        let binormal = self.normal.cross(self.tangent).normalize();
+        let n = point.dot(self.normal);
+        let u = point.dot(self.tangent) / n.abs().max(1e-6);
+        let v = point.dot(binormal) / n.abs().max(1e-6);
+
+        [
+            (u * 0.5 + 0.5).clamp(0.0, 1.0),
+            (v * 0.5 + 0.5).clamp(0.0, 1.0),
+        ]
+    }
+
+    fn get_mesh_data(&self, face_index: u32, update_descriptor: &UpdateDescriptor) -> MeshData {
         let binormal = self.normal.cross(self.tangent);
         // let colour = ilerp(self.normal, -1.0, 1.0).xyzz();
         let mut mesh_data = MeshData {
@@ -161,6 +174,7 @@ impl Face {
                 (self.normal - self.tangent + binormal),
             ],
             0,
+            face_index,
             update_descriptor,
             &mut mesh_data,
         );
@@ -172,6 +186,7 @@ impl Face {
         &self,
         positions: [Vector3<f32>; 4],
         depth: u32,
+        face_index: u32,
         update_descriptor: &UpdateDescriptor,
         mesh_data: &mut MeshData,
     ) {
@@ -204,24 +219,28 @@ impl Face {
             self.descend_node(
                 [top_left, top, middle, left],
                 depth + 1,
+                face_index,
                 update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [top, top_right, right, middle],
                 depth + 1,
+                face_index,
                 update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [middle, right, bottom_right, bottom],
                 depth + 1,
+                face_index,
                 update_descriptor,
                 mesh_data,
             );
             self.descend_node(
                 [left, middle, bottom, bottom_left],
                 depth + 1,
+                face_index,
                 update_descriptor,
                 mesh_data,
             );
@@ -241,75 +260,12 @@ impl Face {
             mesh_data.indices.reserve(mesh_data.indices.capacity() * 4);
         }
 
-        // Use the normalized sphere positions for normal and for computing cube-face UVs
-        let sphere_positions = [top_left, top_right, bottom_right, bottom_left];
-
-        for (i, &sphere_pos) in sphere_positions.iter().enumerate() {
-            // Compute cube face mapping (same logic as the cube-sphere shader)
-            let abs_x = sphere_pos.x.abs();
-            let abs_y = sphere_pos.y.abs();
-            let abs_z = sphere_pos.z.abs();
-
-            // Determine dominant axis -> face index (0:+X, 1:-X, 2:+Y, 3:-Y, 4:+Z, 5:-Z)
-            let face_index = if abs_x >= abs_y && abs_x >= abs_z {
-                // X-major
-                if sphere_pos.x < 0.0 { 1 } else { 0 }
-            } else if abs_y >= abs_x && abs_y >= abs_z {
-                // Y-major
-                if sphere_pos.y < 0.0 { 3 } else { 2 }
-            } else {
-                // Z-major
-                if sphere_pos.z < 0.0 { 5 } else { 4 }
-            };
-
-            // Compute 2D coordinates on the face before normalization
-            let mut face_u = 0.0f32;
-            let mut face_v = 0.0f32;
-
-            match face_index {
-                0 => {
-                    // +X
-                    face_u = sphere_pos.z;
-                    face_v = sphere_pos.y;
-                }
-                1 => {
-                    // -X
-                    face_u = -sphere_pos.z;
-                    face_v = sphere_pos.y;
-                }
-                2 => {
-                    // +Y
-                    face_u = sphere_pos.x;
-                    face_v = sphere_pos.z;
-                }
-                3 => {
-                    // -Y
-                    face_u = sphere_pos.x;
-                    face_v = -sphere_pos.z;
-                }
-                4 => {
-                    // +Z
-                    face_u = sphere_pos.x;
-                    face_v = sphere_pos.y;
-                }
-                5 => {
-                    // -Z
-                    face_u = -sphere_pos.x;
-                    face_v = sphere_pos.y;
-                }
-                _ => {}
-            }
-
-            // Normalize to [0,1] same as shader: divide by max component then *0.5 + 0.5
-            let max_comp = abs_x.max(abs_y).max(abs_z).max(1e-6);
-            let u = face_u / max_comp * 0.5 + 0.5;
-            let v = face_v / max_comp * 0.5 + 0.5;
-
+        for pos in [top_left, top_right, bottom_right, bottom_left] {
+            let uv = self.face_uv(pos);
             mesh_data.vertices.push(Vertex {
-                position: [sphere_pos.x, sphere_pos.y, sphere_pos.z, 1.0],
-                normal: [sphere_pos.x, sphere_pos.y, sphere_pos.z, 0.0],
-                // Pack UV.xy = face UV in [0,1], UV.z = layer index as float
-                uv: [u, v, face_index as f32, 0.0],
+                position: [pos.x, pos.y, pos.z, 1.0],
+                normal: [pos.x, pos.y, pos.z, 0.0],
+                uv: [uv[0], uv[1], face_index as f32, 0.0],
                 colour: [1.0, 1.0, 1.0, 1.0],
             });
         }
@@ -363,9 +319,10 @@ impl Entity for CubePlanet {
             for (i, mesh_data) in self
                 .faces
                 .iter()
-                // .map(|face| face.get_mesh_data(update_descriptor.camera_position))
-                .map(|face| {
+                .enumerate()
+                .map(|(i, face)| {
                     face.get_mesh_data(
+                        i as u32,
                         &UpdateDescriptor {
                             controls: ControlsUpdateDescriptor {
                                 camera_position: model_mat_i.transform_vector(camera_position),
@@ -374,8 +331,6 @@ impl Entity for CubePlanet {
                             },
                             ..update_descriptor.clone()
                         },
-                        // model_mat_i.transform_vector(camera_position),
-                        // model_mat_i.transform_vector(camera_direction),
                     )
                 })
                 .enumerate()

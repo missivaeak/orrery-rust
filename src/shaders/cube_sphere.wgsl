@@ -48,13 +48,14 @@ struct Interpolators {
     @location(2) o_normal: vec3f,
     @location(3) uv: vec2f,
     @location(4) colour: vec4f,
+    @location(5) face_index: u32,
 }
 
 @vertex
 fn vs_main(
     @location(0) o_position: vec4f,
     @location(1) o_normal: vec4f,
-    @location(2) uv: vec2f,
+    @location(2) uv: vec3f,
     @location(3) colour: vec4f,
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
@@ -64,8 +65,9 @@ fn vs_main(
     out.w_position = (OVU.model_mat * o_position).xyz;
     out.c_position = mvp * o_position;
     out.o_normal = o_normal.xyz;
-    out.uv = uv;
+    out.uv = uv.xy;
     out.colour = colour;
+    out.face_index = u32(uv.z);
     return out;
 }
 
@@ -76,21 +78,21 @@ fn fs_main(
     @location(2) o_normal: vec3f,
     @location(3) uv: vec2f,
     @location(4) colour: vec4f,
+    @location(5) face_index: u32,
 ) -> @location(0) vec4f {
     let normal_dir = normalize(w_normal);
     let light_dir = normalize(GFU.light_position.xyz - w_position);
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    let tex_colour = textureSample(texture, texture_sampler, uv, imm.mesh_index);
+    let tex_colour = textureSample(texture, texture_sampler, uv, face_index);
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity
         * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
-    // Only to test if mesh index works
-    if imm.mesh_index == 2 {
+    if face_index == 1 {
         return vec4(1.0, 0.0, 0.0, 1.0);
     }
 
