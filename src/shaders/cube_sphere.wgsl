@@ -1,10 +1,12 @@
-@binding(0) @group(0) var<uniform> GVU: GlobalVertexUniform;
+@group(0) @binding(0)
+var<uniform> GVU: GlobalVertexUniform;
 struct GlobalVertexUniform {
     view_mat: mat4x4f,
     projection_mat: mat4x4f,
-};
+}
 
-@binding(1) @group(0) var<uniform> GFU: GlobalFragmentUniform;
+@group(0) @binding(1)
+var<uniform> GFU: GlobalFragmentUniform;
 struct GlobalFragmentUniform {
     camera_position: vec4f,
     light_position: vec4f,
@@ -14,21 +16,30 @@ struct GlobalFragmentUniform {
     diffuse_intensity: f32,
     specular_intensity: f32,
     specular_gloss: f32,
-};
+}
 
-@binding(2) @group(0) var<uniform> OVU: ObjectVertexUniform;
+@group(0) @binding(2)
+var<uniform> OVU: ObjectVertexUniform;
 struct ObjectVertexUniform {
     model_mat: mat4x4f,
     normal_mat: mat4x4f,
-};
+}
 
-@binding(3) @group(0) var<uniform> OFU: ObjectFragmentUniform;
+@group(0) @binding(3)
+var<uniform> OFU: ObjectFragmentUniform;
 struct ObjectFragmentUniform {
     colour: vec4f,
-};
+}
 
-@binding(4) @group(0) var texture: texture_cube<f32>;
-@binding(5) @group(0) var texture_sampler: sampler;
+@group(0) @binding(4)
+var texture: texture_2d_array<f32>;
+@group(0) @binding(5)
+var texture_sampler: sampler;
+
+var<immediate> imm: Immediates;
+struct Immediates {
+    mesh_index: u32,
+}
 
 struct Interpolators {
     @builtin(position) c_position: vec4f,
@@ -44,7 +55,7 @@ fn vs_main(
     @location(0) o_position: vec4f,
     @location(1) o_normal: vec4f,
     @location(2) uv: vec2f,
-    @location(3) colour: vec4f
+    @location(3) colour: vec4f,
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
 
@@ -71,12 +82,21 @@ fn fs_main(
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    let tex_colour = textureSample(texture, texture_sampler, vec3f(o_normal.x, o_normal.z, -o_normal.y));
+    let tex_colour = textureSample(texture, texture_sampler, uv, imm.mesh_index);
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
-    let specular = GFU.specular_intensity * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
+    let specular = GFU.specular_intensity
+        * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
+    // Only to test if mesh index works
+    if imm.mesh_index == 2 {
+        return vec4(1.0, 0.0, 0.0, 1.0);
+    }
+
     // Combine cubemap color with lighting
-    return vec4(tex_colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular, tex_colour.a);
+    return vec4(
+            tex_colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular,
+            tex_colour.a,
+        );
 }

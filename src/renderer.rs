@@ -5,6 +5,7 @@ use crate::helpers::texture::TextureType;
 use crate::helpers::vertex::Vertex;
 use std::{borrow::Cow, sync::Arc};
 
+use bytemuck::bytes_of;
 use egui_wgpu::wgpu::Instance;
 use std::collections::HashMap;
 use wgpu::{
@@ -88,8 +89,11 @@ impl Renderer {
         let (device, queue) = adapter
             .request_device(&DeviceDescriptor {
                 label: None,
-                required_features: Features::POLYGON_MODE_LINE,
-                required_limits: Limits::default(),
+                required_features: Features::POLYGON_MODE_LINE | Features::IMMEDIATES,
+                required_limits: Limits {
+                    max_immediate_size: 4,
+                    ..Default::default()
+                },
                 ..Default::default()
             })
             .await
@@ -290,7 +294,6 @@ impl Renderer {
                     for object in objects.iter() {
                         let texture_view = if let Some(texture) = &object.texture {
                             texture.create_view(&TextureViewDescriptor {
-                                dimension: Some(TextureViewDimension::Cube),
                                 ..Default::default()
                             })
                         } else {
@@ -336,8 +339,9 @@ impl Renderer {
                                 label: Some("Uniform Bind Group"),
                             });
 
-                        for mesh in object.meshes.iter() {
-                            rpass.set_pipeline(&render_group.render_pipeline);
+                        rpass.set_pipeline(&render_group.render_pipeline);
+
+                        for (i, mesh) in object.meshes.iter().enumerate() {
                             rpass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
                             rpass.set_index_buffer(
                                 mesh.index_buffer.slice(..),
@@ -345,6 +349,8 @@ impl Renderer {
                             );
                             rpass.set_bind_group(0, &uniform_bind_group, &[]);
                             rpass.draw_indexed(0..mesh.index_length, 0, 0..1);
+                            // rpass.set_immediates(0, &[i as u8, 0, 0, 0]);
+                            rpass.set_immediates(0, bytes_of(&[i as u32]));
 
                             tri_count += mesh.index_length / 3;
                         }
@@ -544,7 +550,7 @@ fn get_unlit_render_group(device: &Device, config: &SurfaceConfiguration) -> Ren
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Unlit Pipeline Layout"),
         bind_group_layouts: &[Some(&uniform_bind_group_layout)],
-        immediate_size: 0,
+        immediate_size: 4,
     });
 
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
@@ -681,7 +687,7 @@ fn get_2d_texture_render_group(device: &Device, config: &SurfaceConfiguration) -
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("2D Texture Pipeline Layout"),
         bind_group_layouts: &[Some(&uniform_bind_group_layout)],
-        immediate_size: 0,
+        immediate_size: 4,
     });
 
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
@@ -800,7 +806,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
                 visibility: ShaderStages::VERTEX_FRAGMENT,
                 ty: BindingType::Texture {
                     sample_type: TextureSampleType::Float { filterable: true },
-                    view_dimension: TextureViewDimension::Cube,
+                    view_dimension: TextureViewDimension::D2Array,
                     multisampled: false,
                 },
                 count: None,
@@ -818,7 +824,7 @@ fn get_cubemap_render_group(device: &Device, config: &SurfaceConfiguration) -> R
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Cubemap Pipeline Layout"),
         bind_group_layouts: &[Some(&uniform_bind_group_layout)],
-        immediate_size: 0,
+        immediate_size: 4,
     });
 
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
@@ -939,7 +945,7 @@ fn get_wireframe_render_group(device: &Device, config: &SurfaceConfiguration) ->
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: Some("Wireframe Pipeline Layout"),
         bind_group_layouts: &[Some(&uniform_bind_group_layout)],
-        immediate_size: 0,
+        immediate_size: 4,
     });
 
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
