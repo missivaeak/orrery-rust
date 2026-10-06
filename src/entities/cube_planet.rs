@@ -129,10 +129,10 @@ impl Face {
     pub fn new(normal: Vector3<f32>) -> Self {
         let tangent = if normal.x.abs() > 0.9 {
             // ±X faces: tangent points forward (Y)
-            Vector3::new(0.0, 0.0, 1.0) * normal.x.signum()
+            Vector3::new(0.0, 0.0, -1.0)
         } else if normal.y.abs() > 0.9 {
             // ±Y faces: tangent points right (X)
-            Vector3::new(0.0, 0.0, 1.0) * normal.y.signum()
+            Vector3::new(0.0, 0.0, -1.0)
         } else {
             // ±Z faces: tangent points right (X)
             Vector3::new(1.0, 0.0, 0.0) * normal.z.signum()
@@ -149,8 +149,8 @@ impl Face {
     fn face_uv(&self, point: Vector3<f32>) -> [f32; 2] {
         let binormal = self.normal.cross(self.tangent).normalize();
         let n = point.dot(self.normal);
-        let u = point.dot(self.tangent) / n.abs().max(1e-6);
-        let v = point.dot(binormal) / n.abs().max(1e-6);
+        let u = point.dot(binormal) / n.abs().max(1e-6);
+        let v = point.dot(self.tangent) / n.abs().max(1e-6);
 
         [
             (u * 0.5 + 0.5).clamp(0.0, 1.0),

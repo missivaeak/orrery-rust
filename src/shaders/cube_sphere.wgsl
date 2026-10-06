@@ -59,6 +59,8 @@ fn vs_main(
     @location(3) colour: vec4f,
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
+    let face_index = u32(uv.z);
+    let heightSample = textureLoad(texture, uv, face_index, 0);
 
     var out: Interpolators;
     out.w_normal = (OVU.normal_mat * o_normal).xyz;
@@ -91,10 +93,6 @@ fn fs_main(
     let specular = GFU.specular_intensity
         * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
-
-    if face_index == 1 {
-        return vec4(1.0, 0.0, 0.0, 1.0);
-    }
 
     // Combine cubemap color with lighting
     return vec4(
