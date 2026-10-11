@@ -60,19 +60,38 @@ fn vs_main(
 ) -> Interpolators {
     let mvp = GVU.projection_mat * GVU.view_mat * OVU.model_mat;
     let face_index = u32(uv.z);
-    let texture_dimensions = vec2f(textureDimensions(texture)).x;
-    let height_sample = textureLoad(texture, vec2u(uv.xy * texture_dimensions), face_index, 0);
+    // let face_index = imm.mesh_index;
+
+    let texture_dimensions = vec2f(textureDimensions(texture, face_index));
+    let height_sample = textureLoad(
+            texture,
+            vec2u(uv.xy * texture_dimensions),
+            face_index,
+            face_index,
+        );
     let height = height_sample.a;
 
     var out: Interpolators;
-    out.w_normal = (OVU.normal_mat * o_normal).xyz;
+
+    // Height displacement
+    // let displaced_position = o_position + vec4f(o_normal.xyz * height, 0.0);
+    // out.w_position = (OVU.model_mat * displaced_position).xyz;
+    // out.c_position = mvp * displaced_position;
+    // out.w_normal = (OVU.normal_mat * o_normal).xyz;
+    // out.o_normal = o_normal.xyz;
+    // out.uv = uv.xy;
+    // out.colour = colour;
+    // out.face_index = face_index;
+
+    // Height as colour
     out.w_position = (OVU.model_mat * o_position).xyz;
     out.c_position = mvp * o_position;
+    out.w_normal = (OVU.normal_mat * o_normal).xyz;
     out.o_normal = o_normal.xyz;
     out.uv = uv.xy;
     out.colour = vec4(height, height, height, 1.0);
-    // out.colour = colour;
     out.face_index = face_index;
+
     return out;
 }
 
@@ -90,18 +109,12 @@ fn fs_main(
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    let tex_colour = textureSample(texture, texture_sampler, uv, face_index);
+    // return textureSample(texture, texture_sampler, uv, face_index);
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity
         * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
-    // return colour;
-    // let height = length(o_normal) - 0.5;
-
-    // return vec4(height, height, height, 1.0);
-
-    // Combine cubemap color with lighting
     return vec4(colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular, colour.a);
 }
