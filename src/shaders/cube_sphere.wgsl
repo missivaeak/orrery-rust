@@ -51,6 +51,8 @@ struct Interpolators {
     @location(5) face_index: u32,
 }
 
+const HEIGHT_FACTOR: f32 = 100.0;
+
 @vertex
 fn vs_main(
     @location(0) o_position: vec4f,
@@ -62,35 +64,29 @@ fn vs_main(
     let face_index = u32(uv.z);
     // let face_index = imm.mesh_index;
 
-    let texture_dimensions = vec2f(textureDimensions(texture, face_index));
-    let height_sample = textureLoad(
-            texture,
-            vec2u(uv.xy * texture_dimensions),
-            face_index,
-            face_index,
-        );
-    let height = height_sample.a;
+    let height_sample = textureSampleLevel(texture, texture_sampler, uv.xy, face_index, 100.0);
+    let height = height_sample.r / HEIGHT_FACTOR;
 
     var out: Interpolators;
 
     // Height displacement
-    // let displaced_position = o_position + vec4f(o_normal.xyz * height, 0.0);
-    // out.w_position = (OVU.model_mat * displaced_position).xyz;
-    // out.c_position = mvp * displaced_position;
-    // out.w_normal = (OVU.normal_mat * o_normal).xyz;
-    // out.o_normal = o_normal.xyz;
-    // out.uv = uv.xy;
-    // out.colour = colour;
-    // out.face_index = face_index;
-
-    // Height as colour
-    out.w_position = (OVU.model_mat * o_position).xyz;
-    out.c_position = mvp * o_position;
+    let displaced_position = o_position + vec4f(o_normal.xyz * height, 0.0);
+    out.w_position = (OVU.model_mat * displaced_position).xyz;
+    out.c_position = mvp * displaced_position;
     out.w_normal = (OVU.normal_mat * o_normal).xyz;
     out.o_normal = o_normal.xyz;
     out.uv = uv.xy;
-    out.colour = vec4(height, height, height, 1.0);
+    out.colour = colour;
     out.face_index = face_index;
+
+    // Height as colour
+    // out.w_position = (OVU.model_mat * o_position).xyz;
+    // out.c_position = mvp * o_position;
+    // out.w_normal = (OVU.normal_mat * o_normal).xyz;
+    // out.o_normal = o_normal.xyz;
+    // out.uv = uv.xy;
+    // out.colour = vec4(height, height, height, 1.0);
+    // out.face_index = face_index;
 
     return out;
 }
@@ -109,12 +105,16 @@ fn fs_main(
     let view_dir = normalize(GFU.camera_position.xyz - w_position);
     let half_dir = normalize(view_dir + light_dir);
 
-    // return textureSample(texture, texture_sampler, uv, face_index);
+    let height = textureSample(texture, texture_sampler, uv, face_index);
+    let height_colour = height;
 
     let diffuse = GFU.diffuse_intensity * max(dot(normal_dir, light_dir), 0.0);
     let specular = GFU.specular_intensity
         * pow(max(dot(normal_dir, half_dir), 0.0), GFU.specular_gloss);
     let ambient = GFU.ambient_intensity;
 
-    return vec4(colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular, colour.a);
+    return vec4(
+            height_colour.rgb * (ambient + diffuse) + GFU.specular_colour.rgb * specular,
+            colour.a,
+        );
 }

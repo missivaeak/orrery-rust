@@ -59,13 +59,13 @@ impl CubePlanet {
                 } = face.get_mesh_data(i as u32, &UpdateDescriptor::default());
                 let vertex_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
-                    size: 14272000,
+                    size: 16280576,
                     usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
                 let index_buffer = device.create_buffer(&BufferDescriptor {
                     label: Some("Vertex Buffer"),
-                    size: 464040,
+                    size: 763152,
                     usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -142,7 +142,7 @@ impl Face {
             normal,
             tangent,
             max_depth: 15,
-            min_depth: 2,
+            min_depth: 8,
         }
     }
 
@@ -284,7 +284,7 @@ impl Entity for CubePlanet {
         let dt = update_descriptor.app.delta_time.as_secs_f32();
 
         // 90 degrees per second
-        let speed = 30.0;
+        let speed = 0.0;
 
         let delta_rotation = Quaternion::from_angle_z(Deg(speed * dt));
 
